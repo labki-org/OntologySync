@@ -42,6 +42,9 @@
 	"AutoloadNamespaces": {
 		"MediaWiki\\Extension\\OntologySync\\": "src/"
 	},
+	"ServiceWiringFiles": [
+		"src/ServiceWiring.php"
+	],
 	"HookHandlers": {
 		"OntologySyncHooks": {
 			"class": "MediaWiki\\Extension\\OntologySync\\Hooks\\OntologySyncHooks"
