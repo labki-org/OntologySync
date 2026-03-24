@@ -1,0 +1,9 @@
+{
+	"@metadata": {
+		"authors": [
+			"Labki"
+		]
+	},
+	"ontologysync-desc": "{{desc|name=OntologySync|url=https://github.com/labki-org/OntologySync}}",
+	"ontologysync-managed-footer": "Footer message displayed on wiki pages managed by OntologySync"
+}

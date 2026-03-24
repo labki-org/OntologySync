@@ -1,0 +1,220 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint:
+    name: PHP Lint & Code Style
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, intl
+          tools: composer:v2
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Run parallel-lint
+        run: composer exec parallel-lint -- . --exclude vendor --exclude node_modules
+
+      - name: Run minus-x check
+        run: composer exec minus-x -- check .
+
+      - name: Run PHPCS
+        run: composer exec phpcs -- -sp --cache
+
+  test:
+    name: PHPUnit Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php-version: ['8.1', '8.2', '8.3']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP ${{ matrix.php-version }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: mbstring, intl
+          tools: composer:v2
+          coverage: xdebug
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-php${{ matrix.php-version }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php${{ matrix.php-version }}-composer-
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Run PHPUnit tests
+        run: vendor/bin/phpunit --testsuite unit --testdox
+
+  integration-test:
+    name: Integration Tests (${{ matrix.mw }}, PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    needs: test
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - mw: REL1_43
+            php: '8.1'
+            smw: '6.0'
+            pf: '6.0'
+          - mw: REL1_44
+            php: '8.3'
+            smw: '6.0'
+            pf: '6.0'
+
+    services:
+      db:
+        image: mariadb:10.11
+        env:
+          MARIADB_DATABASE: wiki
+          MARIADB_USER: wiki
+          MARIADB_PASSWORD: wiki_pass
+          MARIADB_ROOT_PASSWORD: root_pass
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+      - name: Setup PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, intl, mysqli, pdo_mysql
+          tools: composer:v2
+
+      - name: Cache MediaWiki installation
+        id: mw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/mediawiki
+          key: mw-${{ matrix.mw }}-smw${{ matrix.smw }}-pf${{ matrix.pf }}-php${{ matrix.php }}-${{ hashFiles('.github/workflows/installMediaWiki.sh') }}
+
+      - name: Checkout extension
+        uses: actions/checkout@v4
+        with:
+          path: OntologySync
+
+      - name: Install MediaWiki + extensions
+        if: steps.mw-cache.outputs.cache-hit != 'true'
+        run: bash OntologySync/.github/workflows/installMediaWiki.sh "${{ matrix.mw }}" "${{ matrix.smw }}" "${{ matrix.pf }}"
+
+      - name: Link extension into MediaWiki
+        run: |
+          ln -s "$GITHUB_WORKSPACE/OntologySync" ~/mediawiki/extensions/OntologySync
+
+      - name: Install MediaWiki database
+        run: |
+          rm -f ~/mediawiki/LocalSettings.php
+          php ~/mediawiki/maintenance/install.php \
+            --dbserver=127.0.0.1 \
+            --dbname=wiki \
+            --dbuser=wiki \
+            --dbpass=wiki_pass \
+            --pass=CITestPassword123! \
+            --scriptpath="" \
+            "OntologySyncTest" \
+            "Admin"
+
+      - name: Configure LocalSettings
+        run: |
+          echo "require_once '$GITHUB_WORKSPACE/OntologySync/tests/LocalSettings.ci.php';" >> ~/mediawiki/LocalSettings.php
+
+      - name: Update database schema
+        run: php ~/mediawiki/maintenance/update.php --quick
+
+      - name: Setup SMW store
+        run: php ~/mediawiki/extensions/SemanticMediaWiki/maintenance/setupStore.php
+
+      - name: Run integration tests
+        run: |
+          php ~/mediawiki/tests/phpunit/phpunit.php \
+            --configuration "$GITHUB_WORKSPACE/OntologySync/tests/phpunit/integration.xml" \
+            --exclude-group Broken \
+            --testdox
+
+  integration-test-summary:
+    name: Integration Tests
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    needs: [integration-test]
+    steps:
+      - run: exit 1
+        if: ${{ needs.integration-test.result != 'success' }}
+
+  static-analysis:
+    name: Phan Static Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, intl, ast
+          tools: composer:v2
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Run Phan
+        run: composer run phan
+        continue-on-error: true

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	PHPUnit configuration for OntologySync integration tests.
+	Requires MediaWiki environment (Docker container).
+
+	Usage:
+	  ./tests/scripts/run-docker-tests.sh integration
+-->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		 xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.3/phpunit.xsd"
+		 bootstrap="integration-bootstrap.php"
+		 colors="true"
+		 beStrictAboutTestsThatDoNotTestAnything="true"
+		 beStrictAboutOutputDuringTests="true"
+		 failOnRisky="true"
+		 failOnWarning="true">
+	<testsuites>
+		<testsuite name="integration">
+			<directory>integration</directory>
+		</testsuite>
+	</testsuites>
+	<php>
+		<ini name="memory_limit" value="512M"/>
+	</php>
+</phpunit>

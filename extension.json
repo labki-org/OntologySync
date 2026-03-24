@@ -1,0 +1,64 @@
+{
+	"name": "OntologySync",
+	"version": "0.1.0",
+	"author": [
+		"Labki"
+	],
+	"url": "https://github.com/labki-org/OntologySync",
+	"descriptionmsg": "ontologysync-desc",
+	"license-name": "GPL-2.0-or-later",
+	"type": "semantic",
+	"requires": {
+		"MediaWiki": ">= 1.43.0",
+		"extensions": {
+			"SemanticMediaWiki": "*",
+			"SemanticSchemas": "*"
+		}
+	},
+	"namespaces": [
+		{
+			"id": 3400,
+			"constant": "NS_ONTOLOGY_DASHBOARD",
+			"name": "OntologyDashboard",
+			"content": true
+		},
+		{
+			"id": 3401,
+			"constant": "NS_ONTOLOGY_DASHBOARD_TALK",
+			"name": "OntologyDashboard_talk"
+		},
+		{
+			"id": 3402,
+			"constant": "NS_ONTOLOGY_RESOURCE",
+			"name": "OntologyResource",
+			"content": true
+		},
+		{
+			"id": 3403,
+			"constant": "NS_ONTOLOGY_RESOURCE_TALK",
+			"name": "OntologyResource_talk"
+		}
+	],
+	"AutoloadNamespaces": {
+		"MediaWiki\\Extension\\OntologySync\\": "src/"
+	},
+	"HookHandlers": {
+		"OntologySyncHooks": {
+			"class": "MediaWiki\\Extension\\OntologySync\\Hooks\\OntologySyncHooks"
+		},
+		"PageDisplayHooks": {
+			"class": "MediaWiki\\Extension\\OntologySync\\Hooks\\PageDisplayHooks"
+		}
+	},
+	"Hooks": {
+		"SetupAfterCache": "OntologySyncHooks",
+		"ArticleViewFooter": "PageDisplayHooks"
+	},
+	"config": {
+		"OntologySyncBundlePath": {
+			"value": null,
+			"description": "Absolute path to a bundle version directory containing a *.vocab.json manifest and .wikitext entity files. Set this to enable ontology import via update.php."
+		}
+	},
+	"manifest_version": 2
+}

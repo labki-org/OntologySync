@@ -1,0 +1,9 @@
+{
+	"@metadata": {
+		"authors": [
+			"Labki"
+		]
+	},
+	"ontologysync-desc": "Connects MediaWiki wikis to the Labki ontology via SMW's content importer",
+	"ontologysync-managed-footer": "This page is managed by <strong>OntologySync</strong>. Manual edits may be overwritten on the next ontology update."
+}
