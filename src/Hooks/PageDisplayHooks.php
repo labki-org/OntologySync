@@ -3,7 +3,6 @@
 namespace MediaWiki\Extension\OntologySync\Hooks;
 
 use Article;
-use MediaWiki\Output\OutputPage;
 
 /**
  * Adds a management footer to pages imported by OntologySync.
