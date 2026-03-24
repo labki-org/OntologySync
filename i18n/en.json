@@ -6,6 +6,8 @@
 	},
 	"ontologysync-desc": "Connects MediaWiki wikis to the Labki ontology via SMW's content importer",
 	"ontologysync-managed-footer": "This page is managed by <strong>OntologySync</strong>. Manual edits may be overwritten on the next ontology update.",
+	"ontologysync-footer-provenance": "(Bundle: $1 v$2)",
+	"ontologysync-footer-manage": "Manage",
 	"ontologysync": "OntologySync",
 	"ontologysync-tab-overview": "Overview",
 	"ontologysync-tab-browse": "Browse",

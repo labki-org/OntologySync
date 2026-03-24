@@ -74,7 +74,11 @@
 			"class": "MediaWiki\\Extension\\OntologySync\\Hooks\\OntologySyncHooks"
 		},
 		"PageDisplayHooks": {
-			"class": "MediaWiki\\Extension\\OntologySync\\Hooks\\PageDisplayHooks"
+			"class": "MediaWiki\\Extension\\OntologySync\\Hooks\\PageDisplayHooks",
+			"services": [
+				"OntologySync.PageStore",
+				"OntologySync.BundleStore"
+			]
 		},
 		"SchemaHooks": {
 			"class": "MediaWiki\\Extension\\OntologySync\\Hooks\\SchemaHooks"

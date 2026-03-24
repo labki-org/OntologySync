@@ -6,6 +6,8 @@
 	},
 	"ontologysync-desc": "{{desc|name=OntologySync|url=https://github.com/labki-org/OntologySync}}",
 	"ontologysync-managed-footer": "Footer message displayed on pages managed by OntologySync",
+	"ontologysync-footer-provenance": "Provenance info in footer. $1 is bundle name, $2 is version",
+	"ontologysync-footer-manage": "Link text to Special:OntologySync",
 	"ontologysync": "Name of the OntologySync special page",
 	"ontologysync-tab-overview": "Tab label for overview section",
 	"ontologysync-tab-browse": "Tab label for browse section",
