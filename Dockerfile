@@ -29,7 +29,7 @@ RUN composer install --no-progress --prefer-dist
 # Install SMW + PageForms + symfony/yaml (needed by SemanticSchemas) via Composer
 ARG SMW_VERSION=6.0
 ARG PF_VERSION=6.0
-RUN echo '{"require":{"mediawiki/semantic-media-wiki":"~'"${SMW_VERSION}"'","mediawiki/page-forms":"~'"${PF_VERSION}"'","symfony/yaml":"^6.0"}}' > composer.local.json \
+RUN echo '{"require":{"mediawiki/semantic-media-wiki":"~'"${SMW_VERSION}"'","mediawiki/page-forms":"~'"${PF_VERSION}"'","symfony/yaml":"^5.0|^6.0"}}' > composer.local.json \
 	&& composer update --no-progress --prefer-dist
 
 # Clone ParserFunctions, Vector skin, and SemanticSchemas

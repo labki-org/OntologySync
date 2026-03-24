@@ -27,7 +27,7 @@ cat > composer.local.json <<EOF
 	"require": {
 		"mediawiki/semantic-media-wiki": "~${SMW_VERSION}",
 		"mediawiki/page-forms": "~${PF_VERSION}",
-		"symfony/yaml": "^6.0"
+		"symfony/yaml": "^5.0|^6.0"
 	}
 }
 EOF
