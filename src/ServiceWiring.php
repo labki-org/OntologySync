@@ -2,6 +2,7 @@
 
 use MediaWiki\Extension\OntologySync\Service\GitService;
 use MediaWiki\Extension\OntologySync\Service\HashService;
+use MediaWiki\Extension\OntologySync\Service\ImportService;
 use MediaWiki\Extension\OntologySync\Service\PageResolver;
 use MediaWiki\Extension\OntologySync\Service\RepoInspector;
 use MediaWiki\Extension\OntologySync\Service\StagingService;
@@ -31,6 +32,20 @@ return [
 		MediaWikiServices $services
 	): HashService {
 		return new HashService();
+	},
+
+	'OntologySync.ImportService' => static function (
+		MediaWikiServices $services
+	): ImportService {
+		return new ImportService(
+			$services->get( 'OntologySync.BundleStore' ),
+			$services->get( 'OntologySync.ModuleStore' ),
+			$services->get( 'OntologySync.PageStore' ),
+			$services->get( 'OntologySync.RepoInspector' ),
+			$services->get( 'OntologySync.StagingService' ),
+			$services->get( 'OntologySync.HashService' ),
+			$services->get( 'OntologySync.PageResolver' )
+		);
 	},
 
 	'OntologySync.ModuleStore' => static function (

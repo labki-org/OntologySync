@@ -90,12 +90,12 @@ class StagingService {
 	}
 
 	private function copyDirectory( string $src, string $dst ): bool {
-		$dir = opendir( $src );
-		if ( $dir === false ) {
+		$entries = scandir( $src );
+		if ( $entries === false ) {
 			return false;
 		}
 
-		while ( ( $file = readdir( $dir ) ) !== false ) {
+		foreach ( $entries as $file ) {
 			if ( $file === '.' || $file === '..' ) {
 				continue;
 			}
@@ -105,22 +105,16 @@ class StagingService {
 
 			if ( is_dir( $srcPath ) ) {
 				if ( !mkdir( $dstPath, 0755, true ) && !is_dir( $dstPath ) ) {
-					closedir( $dir );
 					return false;
 				}
 				if ( !$this->copyDirectory( $srcPath, $dstPath ) ) {
-					closedir( $dir );
 					return false;
 				}
-			} else {
-				if ( !copy( $srcPath, $dstPath ) ) {
-					closedir( $dir );
-					return false;
-				}
+			} elseif ( !copy( $srcPath, $dstPath ) ) {
+				return false;
 			}
 		}
 
-		closedir( $dir );
 		return true;
 	}
 
@@ -129,12 +123,12 @@ class StagingService {
 			return true;
 		}
 
-		$dir = opendir( $path );
-		if ( $dir === false ) {
+		$entries = scandir( $path );
+		if ( $entries === false ) {
 			return false;
 		}
 
-		while ( ( $file = readdir( $dir ) ) !== false ) {
+		foreach ( $entries as $file ) {
 			if ( $file === '.' || $file === '..' ) {
 				continue;
 			}
@@ -147,7 +141,6 @@ class StagingService {
 			}
 		}
 
-		closedir( $dir );
 		return rmdir( $path );
 	}
 }
