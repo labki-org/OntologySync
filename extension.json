@@ -48,16 +48,36 @@
 		},
 		"PageDisplayHooks": {
 			"class": "MediaWiki\\Extension\\OntologySync\\Hooks\\PageDisplayHooks"
+		},
+		"SchemaHooks": {
+			"class": "MediaWiki\\Extension\\OntologySync\\Hooks\\SchemaHooks"
 		}
 	},
 	"Hooks": {
 		"SetupAfterCache": "OntologySyncHooks",
-		"ArticleViewFooter": "PageDisplayHooks"
+		"ArticleViewFooter": "PageDisplayHooks",
+		"LoadExtensionSchemaUpdates": "SchemaHooks"
 	},
 	"config": {
 		"OntologySyncBundlePath": {
 			"value": null,
 			"description": "Absolute path to a bundle version directory containing a *.vocab.json manifest and .wikitext entity files. Set this to enable ontology import via update.php."
+		},
+		"OntologySyncRepoUrl": {
+			"value": "https://github.com/labki-org/labki-ontology",
+			"description": "Git URL of the labki-ontology repository to clone."
+		},
+		"OntologySyncRepoPath": {
+			"value": null,
+			"description": "Local filesystem path where the labki-ontology repo is cloned. Must be set for the extension to function."
+		},
+		"OntologySyncStagingPath": {
+			"value": null,
+			"description": "Path for staging import artifacts. Defaults to $wgCacheDirectory/ontologysync-staging if null."
+		},
+		"OntologySyncAutoRegisterStaging": {
+			"value": true,
+			"description": "If true, automatically register the staging directory with SMW's $smwgImportFileDirs when it contains a vocab.json."
 		}
 	},
 	"manifest_version": 2
