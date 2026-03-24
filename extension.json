@@ -45,6 +45,30 @@
 	"ServiceWiringFiles": [
 		"src/ServiceWiring.php"
 	],
+	"MessagesDirs": {
+		"OntologySync": [
+			"i18n"
+		]
+	},
+	"ExtensionMessagesFiles": {
+		"OntologySyncAlias": "OntologySync.alias.php"
+	},
+	"SpecialPages": {
+		"OntologySync": {
+			"class": "MediaWiki\\Extension\\OntologySync\\Special\\SpecialOntologySync",
+			"services": [
+				"OntologySync.GitService",
+				"OntologySync.RepoInspector",
+				"OntologySync.StagingService",
+				"OntologySync.ImportService",
+				"OntologySync.HashService",
+				"OntologySync.PageResolver",
+				"OntologySync.BundleStore",
+				"OntologySync.ModuleStore",
+				"OntologySync.PageStore"
+			]
+		}
+	},
 	"HookHandlers": {
 		"OntologySyncHooks": {
 			"class": "MediaWiki\\Extension\\OntologySync\\Hooks\\OntologySyncHooks"
@@ -60,6 +84,36 @@
 		"SetupAfterCache": "OntologySyncHooks",
 		"ArticleViewFooter": "PageDisplayHooks",
 		"LoadExtensionSchemaUpdates": "SchemaHooks"
+	},
+	"ResourceModules": {
+		"ext.ontologysync.styles": {
+			"styles": [
+				"resources/ext.ontologysync.styles.css"
+			],
+			"targets": [ "desktop", "mobile" ]
+		}
+	},
+	"AvailableRights": [
+		"ontologysync-manage"
+	],
+	"GroupPermissions": {
+		"sysop": {
+			"ontologysync-manage": true
+		}
+	},
+	"LogTypes": [
+		"ontologysync"
+	],
+	"LogNames": {
+		"ontologysync": "ontologysync-log-name"
+	},
+	"LogHeaders": {
+		"ontologysync": "ontologysync-log-header"
+	},
+	"LogActionsHandlers": {
+		"ontologysync/install": "LogFormatter",
+		"ontologysync/update": "LogFormatter",
+		"ontologysync/remove": "LogFormatter"
 	},
 	"config": {
 		"OntologySyncBundlePath": {
