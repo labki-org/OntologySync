@@ -67,9 +67,15 @@ class RecordStagedImports extends Maintenance {
 		// Step 1: Run update.php to trigger SMW page imports
 		if ( !$this->hasOption( 'skip-update' ) ) {
 			$this->output( "\n=== Running update.php ===\n\n" );
-			$update = $this->runChild( \MediaWiki\Maintenance\Update::class );
-			$update->setOption( 'quick', true );
-			$update->execute();
+			$mwPath = MW_INSTALL_PATH;
+			$cmd = PHP_BINARY . ' ' . escapeshellarg( "$mwPath/maintenance/run.php" )
+				. ' update --quick';
+			$retVal = 0;
+			// @phan-suppress-next-line PhanTypeMismatchArgumentInternal
+			passthru( $cmd, $retVal );
+			if ( $retVal !== 0 ) {
+				$this->fatalError( "update.php failed with exit code $retVal" );
+			}
 			$this->output( "\n=== update.php complete ===\n\n" );
 		}
 
