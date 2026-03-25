@@ -3,12 +3,11 @@
 namespace MediaWiki\Extension\OntologySync\Hooks;
 
 use DatabaseUpdater;
-use MediaWiki\Extension\OntologySync\Maintenance\RecordStagedImports;
 
 /**
  * Hook handler for database schema updates.
  *
- * Registers OntologySync database tables and schedules post-update tasks.
+ * Registers OntologySync database tables during MediaWiki installation/updates.
  */
 class SchemaHooks {
 
@@ -34,8 +33,5 @@ class SchemaHooks {
 			$updater->addExtensionTable( 'ontologysync_modules', $tablesFile );
 			$updater->addExtensionTable( 'ontologysync_pages', $tablesFile );
 		}
-
-		// After SMW imports staged pages, record hashes and flip status to installed
-		$updater->addPostDatabaseUpdateMaintenance( RecordStagedImports::class );
 	}
 }

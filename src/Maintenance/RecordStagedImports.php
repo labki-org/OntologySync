@@ -9,22 +9,27 @@ use MediaWiki\Maintenance\Maintenance;
 use MediaWiki\MediaWikiServices;
 
 /**
- * Post-update maintenance task that finalizes staged bundle imports.
+ * All-in-one maintenance script for staged OntologySync bundles.
  *
- * Automatically run after update.php via addPostDatabaseUpdateMaintenance().
- * Detects bundles with status=staged, records page hashes and module info,
- * flips status to installed, and cleans up the staging directory.
+ * Runs update.php to trigger SMW page imports, then records page hashes
+ * and module info, flips bundle status to installed, and cleans staging.
  *
- * This eliminates the need for users to manually "confirm" imports after
- * running update.php — everything happens in one maintenance pipeline.
+ * Usage after staging on Special:OntologySync:
+ *   php maintenance/run.php "MediaWiki\Extension\OntologySync\Maintenance\RecordStagedImports"
  */
 class RecordStagedImports extends Maintenance {
 
 	public function __construct() {
 		parent::__construct();
 		$this->addDescription(
-			'Records page hashes and module info for staged OntologySync bundles. ' .
-			'Automatically run after update.php.'
+			'Runs update.php to import staged OntologySync bundles, then ' .
+			'records page hashes and module info in the database.'
+		);
+		$this->addOption(
+			'skip-update',
+			'Skip running update.php (use if you already ran it separately)',
+			false,
+			false
 		);
 	}
 
@@ -42,14 +47,13 @@ class RecordStagedImports extends Maintenance {
 		$staged = $bundleStore->getStagedBundles();
 
 		if ( $staged === [] ) {
-			$this->output( "OntologySync: No staged bundles to record.\n" );
+			$this->output( "OntologySync: No staged bundles found.\n" );
 			return;
 		}
 
 		$repoPath = $config->get( 'OntologySyncRepoPath' );
 		if ( $repoPath === null ) {
-			$this->output( "OntologySync: \$wgOntologySyncRepoPath not configured, skipping.\n" );
-			return;
+			$this->fatalError( 'OntologySync: $wgOntologySyncRepoPath not configured.' );
 		}
 
 		$stagingPath = $stagingService->getStagingPath(
@@ -57,23 +61,36 @@ class RecordStagedImports extends Maintenance {
 			$config->get( 'CacheDirectory' )
 		);
 
+		$bundleNames = array_map( static fn ( $b ) => $b['osb_bundle_id'], $staged );
+		$this->output( 'OntologySync: Staged bundles: ' . implode( ', ', $bundleNames ) . "\n" );
+
+		// Step 1: Run update.php to trigger SMW page imports
+		if ( !$this->hasOption( 'skip-update' ) ) {
+			$this->output( "\n=== Running update.php ===\n\n" );
+			$update = $this->runChild( \MediaWiki\Maintenance\Update::class );
+			$update->setOption( 'quick', true );
+			$update->execute();
+			$this->output( "\n=== update.php complete ===\n\n" );
+		}
+
+		// Step 2: Record each staged bundle
 		foreach ( $staged as $bundle ) {
 			$bundleId = $bundle['osb_bundle_id'];
 			$version = $bundle['osb_version'];
 			$commit = $bundle['osb_repo_commit'] ?? '';
 			$userId = (int)( $bundle['osb_installed_by'] ?? 0 );
 
-			$this->output( "OntologySync: Recording install for $bundleId v$version...\n" );
+			$this->output( "OntologySync: Recording $bundleId v$version...\n" );
 
 			$importService->recordInstall(
 				$repoPath, $bundleId, $version, $commit, $userId, $stagingPath
 			);
 
-			$this->output( "OntologySync: $bundleId v$version recorded successfully.\n" );
+			$this->output( "OntologySync: $bundleId v$version recorded.\n" );
 		}
 
-		// Clean up staging directory
+		// Step 3: Clean up staging
 		$stagingService->clearStaging( $stagingPath );
-		$this->output( "OntologySync: Staging directory cleaned up.\n" );
+		$this->output( "OntologySync: Staging cleaned up. Done.\n" );
 	}
 }
