@@ -46,8 +46,8 @@ RUN git clone --depth 1 -b "${MW_BRANCH}" \
 	&& rm -rf extensions/ParserFunctions/.git skins/Vector/.git extensions/SemanticSchemas/.git
 
 # Create directories for user extensions and logs
-RUN mkdir -p /mw-user-extensions /var/log/mediawiki cache images \
-	&& chown -R www-data:www-data cache images /var/log/mediawiki /mw-user-extensions
+RUN mkdir -p /mw-user-extensions /var/log/mediawiki /var/lib/ontologysync cache images \
+	&& chown -R www-data:www-data cache images /var/log/mediawiki /mw-user-extensions /var/lib/ontologysync
 
 # Copy entrypoint
 COPY docker-entrypoint-dev.sh /usr/local/bin/docker-entrypoint-dev.sh

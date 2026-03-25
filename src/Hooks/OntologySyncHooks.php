@@ -3,12 +3,11 @@
 namespace MediaWiki\Extension\OntologySync\Hooks;
 
 /**
- * Registers the ontology bundle directory with SMW's content importer.
+ * Registers bundle and staging directories with SMW's content importer.
  *
- * When $wgOntologySyncBundlePath is set to a bundle version directory
- * (e.g., /path/to/bundles/Default/versions/1.0.0/), this hook registers
- * it with $smwgImportFileDirs so that running `php maintenance/run.php update`
- * will import all entity pages defined in the bundle's vocab.json manifest.
+ * Handles two import sources:
+ * - $wgOntologySyncBundlePath: legacy/manual bundle path
+ * - Staging directory: prepared by the Special page or CLI before update.php
  */
 class OntologySyncHooks {
 
@@ -16,23 +15,55 @@ class OntologySyncHooks {
 	 * @see https://www.mediawiki.org/wiki/Manual:Hooks/SetupAfterCache
 	 */
 	public static function onSetupAfterCache(): void {
-		global $smwgImportFileDirs, $wgOntologySyncBundlePath;
+		global $smwgImportFileDirs, $smwgNamespacesWithSemanticLinks,
+			$wgOntologySyncBundlePath, $wgOntologySyncStagingPath,
+			$wgOntologySyncAutoRegisterStaging, $wgCacheDirectory;
 
 		if ( !defined( 'SMW_EXTENSION_LOADED' ) ) {
 			return;
 		}
 
-		if ( $wgOntologySyncBundlePath === null ) {
-			return;
+		// Enable semantic links in custom namespaces
+		if ( defined( 'NS_ONTOLOGY_DASHBOARD' ) ) {
+			$smwgNamespacesWithSemanticLinks[NS_ONTOLOGY_DASHBOARD] = true;
+		}
+		if ( defined( 'NS_ONTOLOGY_RESOURCE' ) ) {
+			$smwgNamespacesWithSemanticLinks[NS_ONTOLOGY_RESOURCE] = true;
 		}
 
-		if ( !is_dir( $wgOntologySyncBundlePath ) ) {
-			wfLogWarning(
-				"OntologySync: Bundle path does not exist: $wgOntologySyncBundlePath"
-			);
-			return;
+		// Register legacy/manual bundle path
+		if ( $wgOntologySyncBundlePath !== null ) {
+			if ( is_dir( $wgOntologySyncBundlePath ) ) {
+				$smwgImportFileDirs['ontologysync'] = $wgOntologySyncBundlePath;
+			} else {
+				wfLogWarning(
+					"OntologySync: Bundle path does not exist: $wgOntologySyncBundlePath"
+				);
+			}
 		}
 
-		$smwgImportFileDirs['ontologysync'] = $wgOntologySyncBundlePath;
+		// Register staged bundle subdirectories with SMW
+		if ( $wgOntologySyncAutoRegisterStaging ?? true ) {
+			$stagingRoot = $wgOntologySyncStagingPath
+				?? ( $wgCacheDirectory ? $wgCacheDirectory . '/ontologysync-staging' : null );
+
+			if ( $stagingRoot !== null && is_dir( $stagingRoot ) ) {
+				$entries = scandir( $stagingRoot );
+				if ( $entries !== false ) {
+					foreach ( $entries as $entry ) {
+						if ( $entry === '.' || $entry === '..' ) {
+							continue;
+						}
+						$subdir = $stagingRoot . '/' . $entry;
+						if ( is_dir( $subdir ) ) {
+							$vocabFiles = glob( $subdir . '/*.vocab.json' );
+							if ( $vocabFiles !== false && $vocabFiles !== [] ) {
+								$smwgImportFileDirs["ontologysync-$entry"] = $subdir;
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 }

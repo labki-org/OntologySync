@@ -1,0 +1,206 @@
+[
+	{
+		"name": "ontologysync_bundles",
+		"columns": [
+			{
+				"name": "osb_id",
+				"type": "integer",
+				"options": { "notnull": true, "autoincrement": true, "unsigned": true }
+			},
+			{
+				"name": "osb_bundle_id",
+				"type": "string",
+				"options": { "notnull": true, "length": 100 }
+			},
+			{
+				"name": "osb_version",
+				"type": "string",
+				"options": { "notnull": true, "length": 50 }
+			},
+			{
+				"name": "osb_label",
+				"type": "string",
+				"options": { "notnull": false, "length": 255 }
+			},
+			{
+				"name": "osb_description",
+				"type": "text",
+				"options": { "notnull": false, "length": 65535 }
+			},
+			{
+				"name": "osb_repo_commit",
+				"type": "string",
+				"options": { "notnull": false, "length": 40 }
+			},
+			{
+				"name": "osb_installed_by",
+				"type": "integer",
+				"options": { "notnull": false, "unsigned": true }
+			},
+			{
+				"name": "osb_installed_at",
+				"type": "mwtimestamp",
+				"options": { "notnull": true }
+			},
+			{
+				"name": "osb_updated_at",
+				"type": "mwtimestamp",
+				"options": { "notnull": true }
+			},
+			{
+				"name": "osb_status",
+				"type": "string",
+				"options": { "notnull": true, "default": "installed", "length": 20 }
+			}
+		],
+		"indexes": [
+			{
+				"name": "osb_bundle_id_unique",
+				"columns": [ "osb_bundle_id" ],
+				"unique": true
+			},
+			{
+				"name": "idx_osb_status",
+				"columns": [ "osb_status" ],
+				"unique": false
+			}
+		],
+		"pk": [ "osb_id" ]
+	},
+	{
+		"name": "ontologysync_modules",
+		"columns": [
+			{
+				"name": "osm_id",
+				"type": "integer",
+				"options": { "notnull": true, "autoincrement": true, "unsigned": true }
+			},
+			{
+				"name": "osm_module_id",
+				"type": "string",
+				"options": { "notnull": true, "length": 100 }
+			},
+			{
+				"name": "osm_version",
+				"type": "string",
+				"options": { "notnull": true, "length": 50 }
+			},
+			{
+				"name": "osm_bundle_id",
+				"type": "integer",
+				"options": { "notnull": true, "unsigned": true }
+			},
+			{
+				"name": "osm_label",
+				"type": "string",
+				"options": { "notnull": false, "length": 255 }
+			},
+			{
+				"name": "osm_installed_at",
+				"type": "mwtimestamp",
+				"options": { "notnull": true }
+			}
+		],
+		"indexes": [
+			{
+				"name": "osm_bundle_module_unique",
+				"columns": [ "osm_bundle_id", "osm_module_id" ],
+				"unique": true
+			},
+			{
+				"name": "idx_osm_bundle_id",
+				"columns": [ "osm_bundle_id" ],
+				"unique": false
+			},
+			{
+				"name": "idx_osm_module_id",
+				"columns": [ "osm_module_id" ],
+				"unique": false
+			}
+		],
+		"pk": [ "osm_id" ]
+	},
+	{
+		"name": "ontologysync_pages",
+		"columns": [
+			{
+				"name": "osp_id",
+				"type": "integer",
+				"options": { "notnull": true, "autoincrement": true, "unsigned": true }
+			},
+			{
+				"name": "osp_bundle_id",
+				"type": "integer",
+				"options": { "notnull": true, "unsigned": true }
+			},
+			{
+				"name": "osp_module_id",
+				"type": "integer",
+				"options": { "notnull": true, "unsigned": true }
+			},
+			{
+				"name": "osp_page_name",
+				"type": "string",
+				"options": { "notnull": true, "length": 255 }
+			},
+			{
+				"name": "osp_page_namespace",
+				"type": "integer",
+				"options": { "notnull": true }
+			},
+			{
+				"name": "osp_wiki_page_id",
+				"type": "integer",
+				"options": { "notnull": false, "unsigned": true }
+			},
+			{
+				"name": "osp_content_hash",
+				"type": "string",
+				"options": { "notnull": false, "length": 71 }
+			},
+			{
+				"name": "osp_source_file",
+				"type": "string",
+				"options": { "notnull": false, "length": 255 }
+			},
+			{
+				"name": "osp_installed_version",
+				"type": "string",
+				"options": { "notnull": false, "length": 50 }
+			},
+			{
+				"name": "osp_installed_at",
+				"type": "mwtimestamp",
+				"options": { "notnull": true }
+			},
+			{
+				"name": "osp_updated_at",
+				"type": "mwtimestamp",
+				"options": { "notnull": true }
+			}
+		],
+		"indexes": [
+			{
+				"name": "osp_page_unique",
+				"columns": [ "osp_page_namespace", "osp_page_name" ],
+				"unique": true
+			},
+			{
+				"name": "idx_osp_bundle_id",
+				"columns": [ "osp_bundle_id" ],
+				"unique": false
+			},
+			{
+				"name": "idx_osp_module_id",
+				"columns": [ "osp_module_id" ],
+				"unique": false
+			},
+			{
+				"name": "idx_osp_wiki_page_id",
+				"columns": [ "osp_wiki_page_id" ],
+				"unique": false
+			}
+		],
+		"pk": [ "osp_id" ]
+	}
+]

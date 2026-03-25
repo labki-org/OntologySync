@@ -1,0 +1,144 @@
+/**
+ * OntologySync — Special page and footer styles
+ */
+
+/* Tab navigation */
+.ontologysync-tabs {
+	display: flex;
+	gap: 4px;
+	border-bottom: 2px solid #e2e8f0;
+	margin-bottom: 1.5em;
+	padding: 0;
+}
+
+.ontologysync-tab {
+	display: inline-block;
+	padding: 8px 16px;
+	text-decoration: none;
+	color: #475569;
+	font-weight: 500;
+	border-bottom: 2px solid transparent;
+	margin-bottom: -2px;
+	transition: color 0.15s, border-color 0.15s;
+}
+
+.ontologysync-tab:hover {
+	color: #0f172a;
+	border-bottom-color: #94a3b8;
+}
+
+.ontologysync-tab.is-active {
+	color: #0f172a;
+	border-bottom-color: #0d7377;
+	font-weight: 600;
+}
+
+/* Tables */
+.ontologysync-table {
+	width: 100%;
+	margin-top: 0.5em;
+}
+
+/* Cards for browse view */
+.ontologysync-card {
+	border: 1px solid #e2e8f0;
+	border-radius: 8px;
+	padding: 16px;
+	margin-bottom: 12px;
+	background: #f8fafc;
+}
+
+.ontologysync-card-header {
+	margin-bottom: 8px;
+}
+
+.ontologysync-card-desc {
+	color: #475569;
+	margin: 4px 0 8px;
+}
+
+.ontologysync-card-modules {
+	margin-top: 8px;
+	padding-top: 8px;
+	border-top: 1px solid #e2e8f0;
+}
+
+.ontologysync-card-modules ul {
+	margin: 4px 0 0;
+	padding-left: 20px;
+}
+
+/* Badges */
+.ontologysync-badge-installed {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 10px;
+	font-size: 0.8em;
+	background: #dcfce7;
+	color: #16a34a;
+}
+
+.ontologysync-badge-update {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 10px;
+	font-size: 0.8em;
+	background: #fef9c3;
+	color: #ca8a04;
+}
+
+/* Status indicators */
+.ontologysync-status-ok {
+	color: #16a34a;
+	font-weight: 500;
+}
+
+.ontologysync-status-modified {
+	color: #ca8a04;
+	font-weight: 500;
+}
+
+tr.ontologysync-status-modified {
+	background: #fefce8;
+}
+
+/* Buttons */
+.ontologysync-btn {
+	display: inline-block;
+	padding: 6px 16px;
+	border: 1px solid #cbd5e1;
+	border-radius: 6px;
+	background: #fff;
+	color: #0f172a;
+	font-size: 0.9em;
+	cursor: pointer;
+	text-decoration: none;
+	transition: background 0.15s, border-color 0.15s;
+}
+
+.ontologysync-btn:hover {
+	background: #f1f5f9;
+	border-color: #94a3b8;
+}
+
+/* Utility */
+.ontologysync-muted {
+	color: #94a3b8;
+}
+
+.ontologysync-info-table th {
+	white-space: nowrap;
+}
+
+/* Footer on managed pages */
+.ontologysync-managed-footer {
+	margin-top: 2em;
+	padding: 0.5em 1em;
+	border-top: 1px solid #a2a9b1;
+	color: #54595d;
+	font-size: 0.85em;
+}
+
+.ontologysync-managed-footer a {
+	margin-left: 0.5em;
+}

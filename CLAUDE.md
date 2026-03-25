@@ -25,19 +25,43 @@ Local dev wiki runs at http://localhost:8890 (Admin / DockerPass123!).
 
 ## Architecture
 
-OntologySync bridges two external systems into MediaWiki:
+OntologySync bridges the labki-ontology GitHub repo into MediaWiki:
 
-- **labki-ontology** repo: The ontology definitions (bundles with vocab.json + .wikitext files)
-- **ontology-hub**: The management/API layer for ontology lifecycle
+- **labki-ontology** repo: The shared ontology (bundles containing modules of entities)
+- **ontology-hub**: Future API layer for ontology lifecycle (not yet integrated)
 
-The extension registers bundle directories with SMW's `$smwgImportFileDirs` so that
-`php maintenance/run.php update` imports all entity pages defined in the bundle manifest.
+### Core Flow
 
-### Core Directories
+1. Admin configures `$wgOntologySyncRepoPath` in LocalSettings.php
+2. Extension clones labki-ontology to that path (via Special page or CLI)
+3. Admin browses available bundles/modules on Special:OntologySync
+4. Selecting a bundle stages its artifact (vocab.json + .wikitext files)
+5. `php maintenance/run.php update` triggers SMW's content importer
+6. Extension records installed state in DB with content hashes
+
+### Directory Layout
 
 - `src/Hooks/` – MediaWiki hook handlers
-  - `OntologySyncHooks.php` – Registers bundle path with SMW's content importer (SetupAfterCache)
-  - `PageDisplayHooks.php` – Adds management footer to imported pages (ArticleViewFooter)
+  - `OntologySyncHooks.php` – Registers bundle/staging dirs with SMW's $smwgImportFileDirs
+  - `PageDisplayHooks.php` – Enhanced footer with provenance (bundle/version) + manage link
+  - `SchemaHooks.php` – DB table registration via LoadExtensionSchemaUpdates
+- `src/Model/` – Value objects (BundleInfo, ModuleInfo, ImportEntry, RepoStatus)
+- `src/Store/` – DB CRUD (BundleStore, ModuleStore, PageStore)
+- `src/Service/` – Business logic
+  - `GitService.php` – Clone/fetch/pull via Shell::command()
+  - `RepoInspector.php` – Read bundle/module definitions from clone
+  - `StagingService.php` – Build/clear staging dir
+  - `ImportService.php` – Orchestrate install/update/remove lifecycle
+  - `HashService.php` – SHA256 of content between OntologySync markers
+  - `PageResolver.php` – Map namespace constants to integer IDs
+- `src/Special/` – Special:OntologySync with tabbed UI
+- `sql/` – Abstract schema (tables.json) + generated MySQL/SQLite DDL
+
+### Database Tables
+
+- `ontologysync_bundles` – Installed bundle metadata and status
+- `ontologysync_modules` – Module versions within installed bundles
+- `ontologysync_pages` – Per-page provenance and content hashes for edit detection
 
 ### Custom Namespaces
 
@@ -48,22 +72,31 @@ The extension registers bundle directories with SMW's `$smwgImportFileDirs` so t
 
 ### Configuration
 
-- `$wgOntologySyncBundlePath` – Absolute path to a bundle version directory
+| Variable | Purpose |
+|---|---|
+| `$wgOntologySyncRepoUrl` | Git clone URL (default: labki-ontology GitHub) |
+| `$wgOntologySyncRepoPath` | Local filesystem path for the clone (required) |
+| `$wgOntologySyncStagingPath` | Where import artifacts are staged |
+| `$wgOntologySyncBundlePath` | Legacy manual bundle path |
+| `$wgOntologySyncAutoRegisterStaging` | Auto-register staging dir with SMW |
 
-### Management Categories
+### Edit Detection
 
-Imported pages are tagged with categories to mark them as OntologySync-managed:
-- `OntologySync-managed`, `OntologySync-managed-property`, `OntologySync-managed-subobject`,
-  `OntologySync-managed-dashboard`, `OntologySync-managed-resource`
+Content hashes (SHA256) are computed from text between `<!-- OntologySync Start -->` and
+`<!-- OntologySync End -->` markers only. User edits outside those markers don't trigger
+false "modified" warnings. This also supports future "submit changes upstream" via Ontology Hub.
 
-## Dependencies
+## Schema Changes
 
-- MediaWiki >= 1.43
-- Semantic MediaWiki
-- SemanticSchemas (+ PageForms, ParserFunctions)
+```bash
+# Edit sql/tables.json, then regenerate:
+./maintenance/regenerateSchema.sh
+# Commit all three: tables.json + mysql/ + sqlite/
+```
 
 ## Code Style
 
 - MediaWiki coding conventions enforced via `mediawiki-codesniffer`
 - PSR-4 autoloading: `MediaWiki\Extension\OntologySync\` → `src/`
 - Static analysis via Phan with `mediawiki-phan-config`
+- Services registered in `src/ServiceWiring.php` with `OntologySync.` prefix

@@ -3,14 +3,27 @@
 namespace MediaWiki\Extension\OntologySync\Hooks;
 
 use Article;
+use MediaWiki\Extension\OntologySync\Store\BundleStore;
+use MediaWiki\Extension\OntologySync\Store\PageStore;
+use MediaWiki\Html\Html;
+use MediaWiki\SpecialPage\SpecialPage;
+use MediaWiki\Title\Title;
 
 /**
  * Adds a management footer to pages imported by OntologySync.
  *
- * Pages with OntologySync-managed-* categories display a footer indicating
- * they are managed by OntologySync and should not be manually edited.
+ * Pages with OntologySync-managed-* categories display a footer showing
+ * provenance (bundle name, version, module) and a link to Special:OntologySync.
  */
 class PageDisplayHooks {
+
+	private PageStore $pageStore;
+	private BundleStore $bundleStore;
+
+	public function __construct( PageStore $pageStore, BundleStore $bundleStore ) {
+		$this->pageStore = $pageStore;
+		$this->bundleStore = $bundleStore;
+	}
 
 	/** @var string[] Categories that indicate OntologySync management */
 	private const MANAGED_CATEGORIES = [
@@ -23,16 +36,14 @@ class PageDisplayHooks {
 
 	/**
 	 * @see https://www.mediawiki.org/wiki/Manual:Hooks/ArticleViewFooter
-	 * @param Article $article
-	 * @param bool $patrolFooterShown
 	 */
-	public static function onArticleViewFooter( Article $article, bool $patrolFooterShown ): void {
+	public function onArticleViewFooter( Article $article, bool $patrolFooterShown ): void {
 		$title = $article->getTitle();
 		$categories = $title->getParentCategories();
 
 		$isManaged = false;
 		foreach ( self::MANAGED_CATEGORIES as $managedCat ) {
-			$catTitle = \Title::makeTitleSafe( NS_CATEGORY, $managedCat );
+			$catTitle = Title::makeTitleSafe( NS_CATEGORY, $managedCat );
 			if ( $catTitle && isset( $categories[$catTitle->getPrefixedDBkey()] ) ) {
 				$isManaged = true;
 				break;
@@ -44,12 +55,33 @@ class PageDisplayHooks {
 		}
 
 		$out = $article->getContext()->getOutput();
+		$out->addModuleStyles( 'ext.ontologysync.styles' );
+
+		// Try to get provenance from DB
+		$pageRecord = $this->pageStore->getPageByTitle(
+			$title->getNamespace(), $title->getDBkey()
+		);
+
+		$footerContent = wfMessage( 'ontologysync-managed-footer' )->parse();
+
+		if ( $pageRecord !== null ) {
+			$bundle = $this->bundleStore->getBundleById( (int)$pageRecord['osp_bundle_id'] );
+			if ( $bundle !== null ) {
+				$bundleLabel = htmlspecialchars( $bundle['osb_bundle_id'] );
+				$version = htmlspecialchars( $bundle['osb_version'] );
+				$footerContent .= ' ' . wfMessage( 'ontologysync-footer-provenance' )
+					->params( $bundleLabel, $version )->parse();
+			}
+		}
+
+		$manageUrl = SpecialPage::getTitleFor( 'OntologySync' )->getLocalURL();
+		$manageLink = Html::element( 'a', [ 'href' => $manageUrl ],
+			wfMessage( 'ontologysync-footer-manage' )->text() );
+
 		$out->addHTML(
-			'<div class="ontologysync-managed-footer" style="' .
-			'margin-top: 2em; padding: 0.5em 1em; ' .
-			'border-top: 1px solid #a2a9b1; color: #54595d; font-size: 0.85em;">' .
-			wfMessage( 'ontologysync-managed-footer' )->parse() .
-			'</div>'
+			Html::rawElement( 'div', [ 'class' => 'ontologysync-managed-footer' ],
+				$footerContent . ' ' . $manageLink
+			)
 		);
 	}
 }
