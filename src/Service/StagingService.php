@@ -5,6 +5,12 @@ namespace MediaWiki\Extension\OntologySync\Service;
 /**
  * Manages the staging directory where import artifacts are prepared
  * before running update.php.
+ *
+ * Each bundle gets its own subdirectory under the staging root:
+ *   staging/Default/  (vocab.json + .wikitext files)
+ *   staging/Lab/      (vocab.json + .wikitext files)
+ *
+ * This allows multiple bundles to be staged and imported in one update.php run.
  */
 class StagingService {
 
@@ -17,7 +23,7 @@ class StagingService {
 	}
 
 	/**
-	 * Resolve the staging path from config or default.
+	 * Resolve the staging root path from config or default.
 	 */
 	public function getStagingPath( ?string $configuredPath, ?string $cacheDirectory ): string {
 		if ( $configuredPath !== null ) {
@@ -30,47 +36,91 @@ class StagingService {
 	}
 
 	/**
-	 * Copy a bundle version artifact directory to the staging path.
-	 *
-	 * @return bool True if staging was successful
+	 * Get the staging subdirectory for a specific bundle.
 	 */
-	public function buildStaging( string $bundleArtifactPath, string $stagingPath ): bool {
-		// Clear any existing staging
-		$this->clearStaging( $stagingPath );
+	public function getBundleStagingPath( string $stagingRoot, string $bundleId ): string {
+		return $stagingRoot . '/' . $bundleId;
+	}
 
-		// Create staging directory
-		if ( !mkdir( $stagingPath, 0755, true ) && !is_dir( $stagingPath ) ) {
+	/**
+	 * Copy a bundle version artifact to its staging subdirectory.
+	 */
+	public function stageBundle( string $bundleArtifactPath, string $stagingRoot, string $bundleId ): bool {
+		$bundlePath = $this->getBundleStagingPath( $stagingRoot, $bundleId );
+
+		// Clear this bundle's staging subdir (leave other bundles intact)
+		$this->removeDirectory( $bundlePath );
+
+		// Create the bundle subdirectory
+		if ( !mkdir( $bundlePath, 0755, true ) && !is_dir( $bundlePath ) ) {
 			return false;
 		}
 
-		// Recursively copy the artifact directory
-		return $this->copyDirectory( $bundleArtifactPath, $stagingPath );
+		return $this->copyDirectory( $bundleArtifactPath, $bundlePath );
 	}
 
 	/**
-	 * Remove the staging directory.
+	 * Remove a specific bundle's staging subdirectory.
 	 */
-	public function clearStaging( string $stagingPath ): bool {
-		if ( !is_dir( $stagingPath ) ) {
+	public function clearBundleStaging( string $stagingRoot, string $bundleId ): bool {
+		$bundlePath = $this->getBundleStagingPath( $stagingRoot, $bundleId );
+		return $this->removeDirectory( $bundlePath );
+	}
+
+	/**
+	 * Remove the entire staging root directory.
+	 */
+	public function clearAllStaging( string $stagingRoot ): bool {
+		if ( !is_dir( $stagingRoot ) ) {
 			return true;
 		}
-		return $this->removeDirectory( $stagingPath );
+		return $this->removeDirectory( $stagingRoot );
 	}
 
 	/**
-	 * Check if staging directory has a vocab.json ready for import.
+	 * List bundle IDs that have staged artifacts (subdirectories with a vocab.json).
+	 *
+	 * @return string[] Bundle IDs
 	 */
-	public function isStagingReady( string $stagingPath ): bool {
-		return $this->repoInspector->findVocabJson( $stagingPath ) !== null;
+	public function getStagedBundleIds( string $stagingRoot ): array {
+		if ( !is_dir( $stagingRoot ) ) {
+			return [];
+		}
+
+		$entries = scandir( $stagingRoot );
+		if ( $entries === false ) {
+			return [];
+		}
+
+		$bundleIds = [];
+		foreach ( $entries as $entry ) {
+			if ( $entry === '.' || $entry === '..' ) {
+				continue;
+			}
+			$subdir = $stagingRoot . '/' . $entry;
+			if ( is_dir( $subdir ) && $this->repoInspector->findVocabJson( $subdir ) !== null ) {
+				$bundleIds[] = $entry;
+			}
+		}
+
+		return $bundleIds;
 	}
 
 	/**
-	 * Get content hashes for all .wikitext files referenced in the staged vocab.json.
+	 * Check if any bundle is staged and ready for import.
+	 */
+	public function hasStagedBundles( string $stagingRoot ): bool {
+		return $this->getStagedBundleIds( $stagingRoot ) !== [];
+	}
+
+	/**
+	 * Get content hashes for all .wikitext files in a bundle's staging subdir.
 	 *
 	 * @return array<string,string> Map of source file path => hash
 	 */
-	public function getStagedFileHashes( string $stagingPath ): array {
-		$vocabJson = $this->repoInspector->findVocabJson( $stagingPath );
+	public function getStagedFileHashes( string $stagingRoot, string $bundleId ): array {
+		$bundlePath = $this->getBundleStagingPath( $stagingRoot, $bundleId );
+		$vocabJson = $this->repoInspector->findVocabJson( $bundlePath );
 		if ( $vocabJson === null ) {
 			return [];
 		}
@@ -79,7 +129,7 @@ class StagingService {
 		$hashes = [];
 
 		foreach ( $entries as $entry ) {
-			$filePath = $stagingPath . '/' . $entry->getImportFrom();
+			$filePath = $bundlePath . '/' . $entry->getImportFrom();
 			$hash = $this->hashService->hashWikitextFile( $filePath );
 			if ( $hash !== null ) {
 				$hashes[$entry->getImportFrom()] = $hash;

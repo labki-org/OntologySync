@@ -662,8 +662,8 @@ class SpecialOntologySync extends SpecialPage {
 			case 'cancel-stage':
 				$bundleId = $request->getVal( 'bundle' );
 				if ( $bundleId ) {
-					$stagingPath = $this->resolveStagingPath();
-					$this->stagingService->clearStaging( $stagingPath );
+					$stagingRoot = $this->resolveStagingPath();
+					$this->stagingService->clearBundleStaging( $stagingRoot, $bundleId );
 					$existing = $this->bundleStore->getInstalledBundle( $bundleId );
 					if ( $existing !== null && $existing['osb_status'] === 'staged' ) {
 						$this->bundleStore->deleteBundle( $bundleId );

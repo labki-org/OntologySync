@@ -51,7 +51,7 @@ class RecordStagedImports extends Maintenance {
 			$this->fatalError( 'OntologySync: $wgOntologySyncRepoPath not configured.' );
 		}
 
-		$stagingPath = $stagingService->getStagingPath(
+		$stagingRoot = $stagingService->getStagingPath(
 			$config->get( 'OntologySyncStagingPath' ),
 			$config->get( 'CacheDirectory' )
 		);
@@ -65,13 +65,13 @@ class RecordStagedImports extends Maintenance {
 			$this->output( "Recording $bundleId v$version...\n" );
 
 			$importService->recordInstall(
-				$repoPath, $bundleId, $version, $commit, $userId, $stagingPath
+				$repoPath, $bundleId, $version, $commit, $userId, $stagingRoot
 			);
 
+			$stagingService->clearBundleStaging( $stagingRoot, $bundleId );
 			$this->output( "$bundleId v$version recorded.\n" );
 		}
 
-		$stagingService->clearStaging( $stagingPath );
-		$this->output( "Staging cleaned up. Done.\n" );
+		$this->output( "Done.\n" );
 	}
 }

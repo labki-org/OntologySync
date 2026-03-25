@@ -42,16 +42,26 @@ class OntologySyncHooks {
 			}
 		}
 
-		// Register staging directory if auto-registration is enabled
+		// Register staged bundle subdirectories with SMW
 		if ( $wgOntologySyncAutoRegisterStaging ?? true ) {
-			$stagingPath = $wgOntologySyncStagingPath
+			$stagingRoot = $wgOntologySyncStagingPath
 				?? ( $wgCacheDirectory ? $wgCacheDirectory . '/ontologysync-staging' : null );
 
-			if ( $stagingPath !== null && is_dir( $stagingPath ) ) {
-				// Only register if it contains a vocab.json
-				$vocabFiles = glob( $stagingPath . '/*.vocab.json' );
-				if ( $vocabFiles !== false && $vocabFiles !== [] ) {
-					$smwgImportFileDirs['ontologysync-staging'] = $stagingPath;
+			if ( $stagingRoot !== null && is_dir( $stagingRoot ) ) {
+				$entries = scandir( $stagingRoot );
+				if ( $entries !== false ) {
+					foreach ( $entries as $entry ) {
+						if ( $entry === '.' || $entry === '..' ) {
+							continue;
+						}
+						$subdir = $stagingRoot . '/' . $entry;
+						if ( is_dir( $subdir ) ) {
+							$vocabFiles = glob( $subdir . '/*.vocab.json' );
+							if ( $vocabFiles !== false && $vocabFiles !== [] ) {
+								$smwgImportFileDirs["ontologysync-$entry"] = $subdir;
+							}
+						}
+					}
 				}
 			}
 		}

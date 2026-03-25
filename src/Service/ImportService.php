@@ -106,20 +106,20 @@ class ImportService {
 	}
 
 	/**
-	 * Stage a bundle for import.
+	 * Stage a bundle for import into its own subdirectory.
 	 */
 	public function stageBundle(
 		string $repoPath,
 		string $bundleId,
 		string $version,
-		string $stagingPath
+		string $stagingRoot
 	): bool {
 		$artifactPath = $this->repoInspector->getBundleVersionArtifact( $repoPath, $bundleId, $version );
 		if ( $artifactPath === null ) {
 			return false;
 		}
 
-		return $this->stagingService->buildStaging( $artifactPath, $stagingPath );
+		return $this->stagingService->stageBundle( $artifactPath, $stagingRoot, $bundleId );
 	}
 
 	/**
@@ -130,7 +130,7 @@ class ImportService {
 	 * @param string $version Bundle version
 	 * @param string $commit Git commit SHA
 	 * @param int $userId Installing user's MW user ID
-	 * @param string $stagingPath Path to staged artifact
+	 * @param string $stagingRoot Staging root directory (bundle subdir is appended)
 	 * @return int The bundle's DB ID
 	 */
 	public function recordInstall(
@@ -139,8 +139,9 @@ class ImportService {
 		string $version,
 		string $commit,
 		int $userId,
-		string $stagingPath
+		string $stagingRoot
 	): int {
+		$stagingPath = $this->stagingService->getBundleStagingPath( $stagingRoot, $bundleId );
 		$now = wfTimestampNow();
 		$bundle = $this->repoInspector->getBundle( $repoPath, $bundleId );
 
