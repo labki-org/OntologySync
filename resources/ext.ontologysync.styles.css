@@ -1,139 +1,681 @@
 /**
- * OntologySync — Special page and footer styles
+ * OntologySync — Design system and component styles
+ *
+ * Scoped to .ontologysync-shell to avoid polluting the global namespace.
  */
 
-/* Tab navigation */
+/* ─── Design Tokens ─── */
+.ontologysync-shell {
+	/* Slate palette */
+	--os-slate-50: #f8fafc;
+	--os-slate-100: #f1f5f9;
+	--os-slate-200: #e2e8f0;
+	--os-slate-300: #cbd5e1;
+	--os-slate-400: #94a3b8;
+	--os-slate-500: #64748b;
+	--os-slate-600: #475569;
+	--os-slate-700: #334155;
+	--os-slate-800: #1e293b;
+	--os-slate-900: #0f172a;
+
+	/* Accent (teal) */
+	--os-accent-50: #f0fdfa;
+	--os-accent-100: #ccfbf1;
+	--os-accent-500: #14b8a6;
+	--os-accent-600: #0d9488;
+	--os-accent-700: #0d7377;
+
+	/* Status: success */
+	--os-success-50: #f0fdf4;
+	--os-success-100: #dcfce7;
+	--os-success-600: #16a34a;
+
+	/* Status: warning */
+	--os-warning-50: #fefce8;
+	--os-warning-100: #fef9c3;
+	--os-warning-600: #ca8a04;
+
+	/* Status: error */
+	--os-error-50: #fef2f2;
+	--os-error-100: #fee2e2;
+	--os-error-600: #dc2626;
+
+	/* Spacing */
+	--os-space-1: 4px;
+	--os-space-2: 8px;
+	--os-space-3: 12px;
+	--os-space-4: 16px;
+	--os-space-5: 20px;
+	--os-space-6: 24px;
+	--os-space-8: 32px;
+
+	/* Border radius */
+	--os-radius-sm: 6px;
+	--os-radius-md: 10px;
+	--os-radius-lg: 14px;
+
+	/* Shadows */
+	--os-shadow-sm: 0 1px 2px rgba( 0, 0, 0, 0.05 );
+	--os-shadow-md: 0 4px 6px -1px rgba( 0, 0, 0, 0.07 ),
+		0 2px 4px -2px rgba( 0, 0, 0, 0.05 );
+
+	/* Transitions */
+	--os-transition-fast: 120ms ease-out;
+	--os-transition-base: 180ms ease-out;
+}
+
+/* ─── Shell Container ─── */
+.ontologysync-shell {
+	max-width: 960px;
+}
+
+/* ─── Tab Navigation ─── */
 .ontologysync-tabs {
 	display: flex;
-	gap: 4px;
-	border-bottom: 2px solid #e2e8f0;
-	margin-bottom: 1.5em;
-	padding: 0;
+	gap: var( --os-space-1 );
+	padding: var( --os-space-1 );
+	margin-bottom: var( --os-space-6 );
+	background: var( --os-slate-100 );
+	border-radius: var( --os-radius-md );
 }
 
 .ontologysync-tab {
-	display: inline-block;
-	padding: 8px 16px;
+	display: inline-flex;
+	align-items: center;
+	padding: var( --os-space-2 ) var( --os-space-4 );
 	text-decoration: none;
-	color: #475569;
+	color: var( --os-slate-600 );
 	font-weight: 500;
-	border-bottom: 2px solid transparent;
-	margin-bottom: -2px;
-	transition: color 0.15s, border-color 0.15s;
+	font-size: 0.9em;
+	border-radius: var( --os-radius-sm );
+	border: 1px solid transparent;
+	transition: color var( --os-transition-base ),
+		background var( --os-transition-base ),
+		border-color var( --os-transition-base ),
+		box-shadow var( --os-transition-base );
 }
 
 .ontologysync-tab:hover {
-	color: #0f172a;
-	border-bottom-color: #94a3b8;
+	color: var( --os-slate-800 );
+	background: rgba( 255, 255, 255, 0.6 );
 }
 
 .ontologysync-tab.is-active {
-	color: #0f172a;
-	border-bottom-color: #0d7377;
+	color: var( --os-slate-900 );
+	background: #fff;
+	border-color: var( --os-slate-200 );
+	box-shadow: var( --os-shadow-sm );
 	font-weight: 600;
 }
 
-/* Tables */
-.ontologysync-table {
-	width: 100%;
-	margin-top: 0.5em;
+.ontologysync-tab-label {
+	display: inline;
 }
 
-/* Cards for browse view */
+/* ─── Content Area ─── */
+.ontologysync-content {
+	min-height: 200px;
+}
+
+/* ─── Status Card (Overview hero) ─── */
+.ontologysync-status-card {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: var( --os-space-6 );
+	padding: var( --os-space-4 );
+	background: linear-gradient( 135deg, var( --os-slate-50 ) 0%, #fff 50%, var( --os-accent-50 ) 100% );
+	border: 1px solid var( --os-slate-200 );
+	border-radius: var( --os-radius-lg );
+	margin-bottom: var( --os-space-4 );
+}
+
+.ontologysync-status-card-content {
+	flex: 1;
+	min-width: 0;
+}
+
+.ontologysync-status-card-title {
+	font-size: 1.1em;
+	font-weight: 600;
+	color: var( --os-slate-900 );
+	margin: 0 0 var( --os-space-3 ) 0;
+	letter-spacing: -0.01em;
+}
+
+.ontologysync-status-card-details {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var( --os-space-4 ) var( --os-space-8 );
+}
+
+.ontologysync-detail-item {
+	display: flex;
+	flex-direction: column;
+	gap: var( --os-space-1 );
+}
+
+.ontologysync-detail-label {
+	font-size: 0.75em;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var( --os-slate-500 );
+}
+
+.ontologysync-detail-value code {
+	font-size: 0.875em;
+	color: var( --os-slate-700 );
+}
+
+.ontologysync-status-card-actions {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: var( --os-space-3 );
+	flex-shrink: 0;
+}
+
+.ontologysync-hero-buttons {
+	display: flex;
+	gap: var( --os-space-2 );
+}
+
+/* ─── Status Chips ─── */
+.ontologysync-status-chip {
+	display: inline-flex;
+	align-items: center;
+	padding: var( --os-space-1 ) var( --os-space-3 );
+	border-radius: 999px;
+	font-size: 0.8em;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.ontologysync-status-chip.is-ok {
+	background: var( --os-success-100 );
+	color: var( --os-success-600 );
+}
+
+.ontologysync-status-chip.is-warning {
+	background: var( --os-warning-100 );
+	color: var( --os-warning-600 );
+}
+
+.ontologysync-status-chip.is-muted {
+	background: var( --os-slate-200 );
+	color: var( --os-slate-600 );
+}
+
+/* ─── Summary Stats Grid ─── */
+.ontologysync-summary-grid {
+	display: grid;
+	grid-template-columns: repeat( auto-fit, minmax( 140px, 1fr ) );
+	gap: var( --os-space-3 );
+	margin-bottom: var( --os-space-4 );
+}
+
+.ontologysync-stat {
+	display: flex;
+	flex-direction: column;
+	padding: var( --os-space-3 ) var( --os-space-4 );
+	background: #fff;
+	border: 1px solid var( --os-slate-200 );
+	border-radius: var( --os-radius-md );
+	box-shadow: var( --os-shadow-sm );
+	transition: box-shadow var( --os-transition-base ),
+		transform var( --os-transition-base );
+}
+
+.ontologysync-stat:hover {
+	box-shadow: var( --os-shadow-md );
+	transform: translateY( -1px );
+}
+
+.ontologysync-stat-value {
+	font-size: 1.75rem;
+	font-weight: 700;
+	color: var( --os-slate-900 );
+	letter-spacing: -0.03em;
+	line-height: 1.2;
+}
+
+.ontologysync-stat-label {
+	font-size: 0.75em;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var( --os-slate-500 );
+	margin-top: var( --os-space-1 );
+}
+
+/* ─── Sections ─── */
+.ontologysync-section {
+	margin-bottom: var( --os-space-4 );
+}
+
+.ontologysync-section-title {
+	font-size: 1.05em;
+	font-weight: 600;
+	color: var( --os-slate-900 );
+	margin: 0 0 var( --os-space-2 ) 0;
+	letter-spacing: -0.01em;
+}
+
+.ontologysync-section-intro {
+	color: var( --os-slate-500 );
+	font-size: 0.9em;
+	margin: 0 0 var( --os-space-4 ) 0;
+}
+
+/* ─── Cards ─── */
 .ontologysync-card {
-	border: 1px solid #e2e8f0;
-	border-radius: 8px;
-	padding: 16px;
-	margin-bottom: 12px;
-	background: #f8fafc;
+	border: 1px solid var( --os-slate-200 );
+	border-radius: var( --os-radius-md );
+	padding: var( --os-space-4 );
+	margin-bottom: var( --os-space-3 );
+	background: #fff;
+	box-shadow: var( --os-shadow-sm );
 }
 
 .ontologysync-card-header {
-	margin-bottom: 8px;
+	margin-bottom: var( --os-space-2 );
+	padding-bottom: var( --os-space-2 );
+	border-bottom: 1px solid var( --os-slate-200 );
+}
+
+.ontologysync-card-title-row {
+	display: flex;
+	align-items: center;
+	gap: var( --os-space-3 );
+	flex-wrap: wrap;
+}
+
+.ontologysync-card-title {
+	font-size: 1.05em;
+	font-weight: 600;
+	color: var( --os-slate-900 );
+	margin: 0;
+	letter-spacing: -0.01em;
+}
+
+.ontologysync-card-meta {
+	display: flex;
+	align-items: center;
+	gap: var( --os-space-3 );
+	margin-top: var( --os-space-1 );
+	font-size: 0.85em;
+}
+
+.ontologysync-card-meta code {
+	color: var( --os-accent-700 );
+	font-weight: 500;
 }
 
 .ontologysync-card-desc {
-	color: #475569;
-	margin: 4px 0 8px;
+	color: var( --os-slate-600 );
+	margin: 0 0 var( --os-space-2 );
+	font-size: 0.85em;
+	line-height: 1.4;
 }
 
 .ontologysync-card-modules {
-	margin-top: 8px;
-	padding-top: 8px;
-	border-top: 1px solid #e2e8f0;
+	margin-top: var( --os-space-2 );
+	padding-top: var( --os-space-2 );
+	border-top: 1px solid var( --os-slate-200 );
+}
+
+.ontologysync-card-modules-label {
+	font-size: 0.75em;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var( --os-slate-500 );
 }
 
 .ontologysync-card-modules ul {
-	margin: 4px 0 0;
-	padding-left: 20px;
+	margin: var( --os-space-2 ) 0 0;
+	padding-left: var( --os-space-5 );
 }
 
-/* Badges */
+.ontologysync-card-modules li {
+	padding: var( --os-space-1 ) 0;
+	font-size: 0.9em;
+	color: var( --os-slate-700 );
+}
+
+/* ─── Action Bar (install preview) ─── */
+.ontologysync-action-bar {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: var( --os-space-4 );
+	padding: var( --os-space-4 ) var( --os-space-5 );
+	background: var( --os-accent-50 );
+	border: 1px solid var( --os-accent-100, var( --os-slate-200 ) );
+	border-radius: var( --os-radius-md );
+	margin-bottom: var( --os-space-4 );
+}
+
+.ontologysync-action-bar-left {
+	flex: 1;
+	min-width: 0;
+}
+
+.ontologysync-action-bar-left .ontologysync-section-title {
+	margin-bottom: var( --os-space-2 );
+}
+
+.ontologysync-action-bar-left .ontologysync-preview-stats {
+	margin-bottom: 0;
+}
+
+.ontologysync-action-bar > .ontologysync-inline-form {
+	flex-shrink: 0;
+	align-self: center;
+}
+
+.ontologysync-action-bar .ontologysync-btn-primary {
+	padding: var( --os-space-3 ) var( --os-space-6 );
+	font-size: 0.95em;
+}
+
+/* ─── Callout / Guidance ─── */
+.ontologysync-callout {
+	padding: var( --os-space-3 ) var( --os-space-4 );
+	background: var( --os-slate-50 );
+	border: 1px dashed var( --os-slate-300 );
+	border-radius: var( --os-radius-sm );
+	margin-bottom: var( --os-space-4 );
+	font-size: 0.85em;
+	color: var( --os-slate-600 );
+	line-height: 1.6;
+}
+
+.ontologysync-callout ol {
+	margin: var( --os-space-2 ) 0 0;
+	padding-left: var( --os-space-5 );
+}
+
+.ontologysync-callout li {
+	padding: 1px 0;
+}
+
+.ontologysync-callout code {
+	font-size: 0.9em;
+	background: var( --os-slate-200 );
+	padding: 1px 5px;
+	border-radius: 3px;
+}
+
+/* ─── Tables ─── */
+.ontologysync-table {
+	width: 100%;
+	margin-top: 0;
+	border-collapse: collapse;
+}
+
+/* Override wikitable defaults inside our shell for cleaner look */
+.ontologysync-shell .ontologysync-table thead th {
+	font-size: 0.75em;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var( --os-slate-500 );
+	background: var( --os-slate-50 );
+	border-bottom: 2px solid var( --os-slate-200 );
+	padding: var( --os-space-2 ) var( --os-space-4 );
+	text-align: left;
+}
+
+.ontologysync-shell .ontologysync-table tbody td {
+	padding: var( --os-space-2 ) var( --os-space-4 );
+	border-bottom: 1px solid var( --os-slate-100 );
+	font-size: 0.875em;
+	color: var( --os-slate-700 );
+	vertical-align: middle;
+}
+
+.ontologysync-shell .ontologysync-table tbody tr:hover {
+	background: var( --os-slate-50 );
+}
+
+.ontologysync-shell .ontologysync-table tbody tr:last-child td {
+	border-bottom: none;
+}
+
+/* Compact variant — tighter rows for long page lists */
+.ontologysync-shell .ontologysync-table-compact thead th {
+	padding: var( --os-space-1 ) var( --os-space-3 );
+	font-size: 0.7em;
+}
+
+.ontologysync-shell .ontologysync-table-compact tbody td {
+	padding: var( --os-space-1 ) var( --os-space-3 );
+	font-size: 0.825em;
+}
+
+/* Table inside a card: remove card padding conflict */
+.ontologysync-card > .ontologysync-table-wrap {
+	margin: calc( -1 * var( --os-space-5 ) );
+	margin-top: 0;
+}
+
+.ontologysync-card > .ontologysync-table-wrap .ontologysync-table {
+	border-radius: 0 0 var( --os-radius-md ) var( --os-radius-md );
+	overflow: hidden;
+}
+
+/* ─── Badges ─── */
 .ontologysync-badge-installed {
 	display: inline-block;
-	padding: 2px 8px;
-	border-radius: 10px;
-	font-size: 0.8em;
-	background: #dcfce7;
-	color: #16a34a;
+	padding: 2px 10px;
+	border-radius: 999px;
+	font-size: 0.75em;
+	font-weight: 600;
+	background: var( --os-success-100 );
+	color: var( --os-success-600 );
 }
 
 .ontologysync-badge-update {
 	display: inline-block;
-	padding: 2px 8px;
-	border-radius: 10px;
-	font-size: 0.8em;
-	background: #fef9c3;
-	color: #ca8a04;
+	padding: 2px 10px;
+	border-radius: 999px;
+	font-size: 0.75em;
+	font-weight: 600;
+	background: var( --os-warning-100 );
+	color: var( --os-warning-600 );
 }
 
-/* Status indicators */
+/* ─── Status Indicators ─── */
 .ontologysync-status-ok {
-	color: #16a34a;
-	font-weight: 500;
+	color: var( --os-success-600 );
+	font-weight: 600;
 }
 
 .ontologysync-status-modified {
-	color: #ca8a04;
-	font-weight: 500;
+	color: var( --os-warning-600 );
+	font-weight: 600;
 }
 
 tr.ontologysync-status-modified {
-	background: #fefce8;
+	background: var( --os-warning-50 );
 }
 
-/* Buttons */
+.ontologysync-shell .ontologysync-table tbody tr.ontologysync-status-modified:hover {
+	background: var( --os-warning-100 );
+}
+
+/* ─── Buttons ─── */
 .ontologysync-btn {
-	display: inline-block;
-	padding: 6px 16px;
-	border: 1px solid #cbd5e1;
-	border-radius: 6px;
+	display: inline-flex;
+	align-items: center;
+	padding: var( --os-space-2 ) var( --os-space-4 );
+	border: 1px solid var( --os-slate-300 );
+	border-radius: var( --os-radius-sm );
 	background: #fff;
-	color: #0f172a;
-	font-size: 0.9em;
+	color: var( --os-slate-700 );
+	font-size: 0.875em;
+	font-weight: 500;
 	cursor: pointer;
 	text-decoration: none;
-	transition: background 0.15s, border-color 0.15s;
+	white-space: nowrap;
+	transition: background var( --os-transition-fast ),
+		border-color var( --os-transition-fast ),
+		box-shadow var( --os-transition-fast ),
+		transform var( --os-transition-fast );
 }
 
 .ontologysync-btn:hover {
-	background: #f1f5f9;
-	border-color: #94a3b8;
+	background: var( --os-slate-50 );
+	border-color: var( --os-slate-400 );
+	box-shadow: var( --os-shadow-sm );
 }
 
-/* Utility */
+.ontologysync-btn:active {
+	transform: translateY( 1px );
+}
+
+.ontologysync-btn-primary {
+	background: var( --os-accent-700 );
+	color: #fff;
+	border-color: var( --os-accent-700 );
+}
+
+.ontologysync-btn-primary:hover {
+	background: var( --os-accent-600 );
+	border-color: var( --os-accent-600 );
+	color: #fff;
+}
+
+.ontologysync-btn-danger {
+	color: var( --os-error-600 );
+	border-color: var( --os-error-600 );
+}
+
+.ontologysync-btn-danger:hover {
+	background: var( --os-error-50 );
+	border-color: var( --os-error-600 );
+}
+
+.ontologysync-inline-form {
+	display: inline-block;
+	margin: 0;
+}
+
+/* ─── Empty State ─── */
+.ontologysync-empty-state {
+	text-align: center;
+	padding: var( --os-space-6 ) var( --os-space-4 );
+	border: 2px dashed var( --os-slate-200 );
+	border-radius: var( --os-radius-md );
+	background: var( --os-slate-50 );
+}
+
+.ontologysync-empty-state p {
+	margin: 0;
+	color: var( --os-slate-500 );
+	font-style: italic;
+	font-size: 0.9em;
+}
+
+/* ─── Utility ─── */
 .ontologysync-muted {
-	color: #94a3b8;
+	color: var( --os-slate-400 );
 }
 
 .ontologysync-info-table th {
 	white-space: nowrap;
 }
 
-/* Footer on managed pages */
+/* ─── Remove List (Install tab) ─── */
+.ontologysync-remove-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: var( --os-space-3 ) var( --os-space-4 );
+	border-bottom: 1px solid var( --os-slate-100 );
+}
+
+.ontologysync-remove-item:last-child {
+	border-bottom: none;
+}
+
+.ontologysync-remove-item-info {
+	display: flex;
+	align-items: center;
+	gap: var( --os-space-2 );
+}
+
+/* ─── Staged Banner ─── */
+.ontologysync-staged-banner {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: var( --os-space-4 );
+	padding: var( --os-space-4 ) var( --os-space-5 );
+	background: var( --os-warning-50 );
+	border: 1px solid var( --os-warning-100 );
+	border-left: 3px solid var( --os-warning-600 );
+	border-radius: var( --os-radius-sm );
+	margin-bottom: var( --os-space-4 );
+}
+
+.ontologysync-staged-banner-text {
+	flex: 1;
+	font-size: 0.9em;
+	color: var( --os-slate-700 );
+	line-height: 1.6;
+}
+
+.ontologysync-staged-banner-text code {
+	font-size: 0.85em;
+	background: var( --os-warning-100 );
+	padding: 1px 5px;
+	border-radius: 3px;
+}
+
+/* ─── Install Preview Summary ─── */
+.ontologysync-preview-stats {
+	display: flex;
+	gap: var( --os-space-4 );
+	flex-wrap: wrap;
+	margin-bottom: var( --os-space-4 );
+}
+
+.ontologysync-preview-stat {
+	display: flex;
+	align-items: center;
+	gap: var( --os-space-2 );
+	padding: var( --os-space-2 ) var( --os-space-4 );
+	background: var( --os-slate-50 );
+	border: 1px solid var( --os-slate-200 );
+	border-radius: var( --os-radius-sm );
+	font-size: 0.875em;
+}
+
+.ontologysync-preview-stat-value {
+	font-weight: 700;
+	color: var( --os-slate-900 );
+}
+
+.ontologysync-preview-stat-label {
+	color: var( --os-slate-500 );
+}
+
+.ontologysync-preview-stat.is-warning {
+	border-color: var( --os-warning-100 );
+	background: var( --os-warning-50 );
+}
+
+.ontologysync-preview-stat.is-warning .ontologysync-preview-stat-value {
+	color: var( --os-warning-600 );
+}
+
+/* ─── Footer on managed pages ─── */
 .ontologysync-managed-footer {
 	margin-top: 2em;
-	padding: 0.5em 1em;
+	padding: var( --os-space-3 ) var( --os-space-4 );
 	border-top: 1px solid #a2a9b1;
 	color: #54595d;
 	font-size: 0.85em;
@@ -141,4 +683,26 @@ tr.ontologysync-status-modified {
 
 .ontologysync-managed-footer a {
 	margin-left: 0.5em;
+}
+
+/* ─── Responsive ─── */
+@media ( max-width: 640px ) {
+	.ontologysync-status-card {
+		flex-direction: column;
+	}
+
+	.ontologysync-status-card-actions {
+		align-items: flex-start;
+		flex-direction: row;
+		flex-wrap: wrap;
+		gap: var( --os-space-2 );
+	}
+
+	.ontologysync-tabs {
+		flex-wrap: wrap;
+	}
+
+	.ontologysync-summary-grid {
+		grid-template-columns: 1fr 1fr;
+	}
 }

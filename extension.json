@@ -89,6 +89,10 @@
 		"ArticleViewFooter": "PageDisplayHooks",
 		"LoadExtensionSchemaUpdates": "SchemaHooks"
 	},
+	"ResourceFileModulePaths": {
+		"localBasePath": "",
+		"remoteExtPath": "OntologySync"
+	},
 	"ResourceModules": {
 		"ext.ontologysync.styles": {
 			"styles": [
