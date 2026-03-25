@@ -132,13 +132,13 @@ class SpecialOntologySync extends SpecialPage {
 		foreach ( $tabs as $action => $label ) {
 			$url = $this->getPageTitle( $action )->getLocalURL();
 			$isActive = ( $action === $currentAction );
-			$links .= Html::rawElement(
+			$links .= Html::element(
 				'a',
 				[
 					'href' => $url,
 					'class' => 'ontologysync-tab' . ( $isActive ? ' is-active' : '' ),
 				],
-				Html::element( 'span', [ 'class' => 'ontologysync-tab-label' ], $label )
+				$label
 			);
 		}
 
@@ -232,15 +232,19 @@ class SpecialOntologySync extends SpecialPage {
 			)
 		);
 
-		// Summary stats
+		// Summary stats — cache per-bundle counts to avoid re-querying in the table
 		$bundles = $this->bundleStore->getAllInstalledBundles();
 		$totalModules = 0;
 		$totalPages = 0;
+		$bundleCounts = [];
 		foreach ( $bundles as $b ) {
-			$totalModules += count(
+			$mc = count(
 				$this->moduleStore->getModulesForBundle( (int)$b['osb_id'] ) );
-			$totalPages += count(
+			$pc = count(
 				$this->pageStore->getPagesForBundle( (int)$b['osb_id'] ) );
+			$bundleCounts[(int)$b['osb_id']] = [ 'modules' => $mc, 'pages' => $pc ];
+			$totalModules += $mc;
+			$totalPages += $pc;
 		}
 
 		$output->addHTML(
@@ -268,22 +272,17 @@ class SpecialOntologySync extends SpecialPage {
 		);
 
 		if ( $bundles === [] ) {
-			$output->addHTML(
-				Html::rawElement( 'div', [ 'class' => 'ontologysync-empty-state' ],
-					Html::element( 'p', [],
-						$this->msg( 'ontologysync-no-bundles-installed' )->text() )
-				)
-			);
+			$output->addHTML( $this->renderEmptyState(
+				$this->msg( 'ontologysync-no-bundles-installed' )->text() ) );
 			$output->addHTML( Html::closeElement( 'div' ) );
 			return;
 		}
 
 		$rows = '';
 		foreach ( $bundles as $b ) {
-			$moduleCount = count(
-				$this->moduleStore->getModulesForBundle( (int)$b['osb_id'] ) );
-			$pageCount = count(
-				$this->pageStore->getPagesForBundle( (int)$b['osb_id'] ) );
+			$counts = $bundleCounts[(int)$b['osb_id']];
+			$moduleCount = $counts['modules'];
+			$pageCount = $counts['pages'];
 
 			$repoBundle = $this->repoInspector->getBundle(
 				$repoPath, $b['osb_bundle_id'] );
@@ -378,12 +377,8 @@ class SpecialOntologySync extends SpecialPage {
 
 		$bundles = $this->repoInspector->listBundles( $repoPath );
 		if ( $bundles === [] ) {
-			$output->addHTML(
-				Html::rawElement( 'div', [ 'class' => 'ontologysync-empty-state' ],
-					Html::element( 'p', [],
-						$this->msg( 'ontologysync-no-bundles-in-repo' )->text() )
-				)
-			);
+			$output->addHTML( $this->renderEmptyState(
+				$this->msg( 'ontologysync-no-bundles-in-repo' )->text() ) );
 			return;
 		}
 
@@ -592,7 +587,8 @@ class SpecialOntologySync extends SpecialPage {
 
 		if ( $bundle === null ) {
 			$output->addHTML( Html::errorBox(
-				'Bundle not found: ' . htmlspecialchars( $bundleId ) ) );
+				$this->msg( 'ontologysync-error-bundle-not-found' )
+					->params( $bundleId )->parse() ) );
 			return;
 		}
 
@@ -698,12 +694,8 @@ class SpecialOntologySync extends SpecialPage {
 
 		$pages = $this->pageStore->getAllManagedPages();
 		if ( $pages === [] ) {
-			$output->addHTML(
-				Html::rawElement( 'div', [ 'class' => 'ontologysync-empty-state' ],
-					Html::element( 'p', [],
-						$this->msg( 'ontologysync-no-managed-pages' )->text() )
-				)
-			);
+			$output->addHTML( $this->renderEmptyState(
+				$this->msg( 'ontologysync-no-managed-pages' )->text() ) );
 			return;
 		}
 
@@ -944,24 +936,29 @@ class SpecialOntologySync extends SpecialPage {
 		);
 	}
 
-	private function renderStat( string $value, string $label ): string {
-		return Html::rawElement( 'div', [ 'class' => 'ontologysync-stat' ],
-			Html::element( 'span', [ 'class' => 'ontologysync-stat-value' ],
-				$value ) .
-			Html::element( 'span', [ 'class' => 'ontologysync-stat-label' ],
-				$label )
+	private function renderStat(
+		string $value, string $label, string $classPrefix = 'ontologysync-stat',
+		string $extraClass = ''
+	): string {
+		$class = $classPrefix . $extraClass;
+		return Html::rawElement( 'div', [ 'class' => $class ],
+			Html::element( 'span',
+				[ 'class' => $classPrefix . '-value' ], $value ) .
+			Html::element( 'span',
+				[ 'class' => $classPrefix . '-label' ], $label )
 		);
 	}
 
 	private function renderPreviewStat(
 		string $value, string $label, string $extraClass = ''
 	): string {
-		return Html::rawElement( 'div',
-			[ 'class' => 'ontologysync-preview-stat' . $extraClass ],
-			Html::element( 'span',
-				[ 'class' => 'ontologysync-preview-stat-value' ], $value ) .
-			Html::element( 'span',
-				[ 'class' => 'ontologysync-preview-stat-label' ], $label )
+		return $this->renderStat(
+			$value, $label, 'ontologysync-preview-stat', $extraClass );
+	}
+
+	private function renderEmptyState( string $message ): string {
+		return Html::rawElement( 'div', [ 'class' => 'ontologysync-empty-state' ],
+			Html::element( 'p', [], $message )
 		);
 	}
 

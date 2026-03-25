@@ -21,7 +21,6 @@
 	/* Accent (teal) */
 	--os-accent-50: #f0fdfa;
 	--os-accent-100: #ccfbf1;
-	--os-accent-500: #14b8a6;
 	--os-accent-600: #0d9488;
 	--os-accent-700: #0d7377;
 
@@ -37,7 +36,6 @@
 
 	/* Status: error */
 	--os-error-50: #fef2f2;
-	--os-error-100: #fee2e2;
 	--os-error-600: #dc2626;
 
 	/* Spacing */
@@ -62,10 +60,8 @@
 	/* Transitions */
 	--os-transition-fast: 120ms ease-out;
 	--os-transition-base: 180ms ease-out;
-}
 
-/* ─── Shell Container ─── */
-.ontologysync-shell {
+	/* Shell layout */
 	max-width: 960px;
 }
 
@@ -106,10 +102,6 @@
 	border-color: var( --os-slate-200 );
 	box-shadow: var( --os-shadow-sm );
 	font-weight: 600;
-}
-
-.ontologysync-tab-label {
-	display: inline;
 }
 
 /* ─── Content Area ─── */
@@ -455,34 +447,22 @@
 	font-size: 0.825em;
 }
 
-/* Table inside a card: remove card padding conflict */
-.ontologysync-card > .ontologysync-table-wrap {
-	margin: calc( -1 * var( --os-space-5 ) );
-	margin-top: 0;
-}
-
-.ontologysync-card > .ontologysync-table-wrap .ontologysync-table {
-	border-radius: 0 0 var( --os-radius-md ) var( --os-radius-md );
-	overflow: hidden;
-}
-
 /* ─── Badges ─── */
-.ontologysync-badge-installed {
-	display: inline-block;
-	padding: 2px 10px;
-	border-radius: 999px;
-	font-size: 0.75em;
-	font-weight: 600;
-	background: var( --os-success-100 );
-	color: var( --os-success-600 );
-}
-
+.ontologysync-badge-installed,
 .ontologysync-badge-update {
 	display: inline-block;
 	padding: 2px 10px;
 	border-radius: 999px;
 	font-size: 0.75em;
 	font-weight: 600;
+}
+
+.ontologysync-badge-installed {
+	background: var( --os-success-100 );
+	color: var( --os-success-600 );
+}
+
+.ontologysync-badge-update {
 	background: var( --os-warning-100 );
 	color: var( --os-warning-600 );
 }
@@ -582,10 +562,6 @@ tr.ontologysync-status-modified {
 /* ─── Utility ─── */
 .ontologysync-muted {
 	color: var( --os-slate-400 );
-}
-
-.ontologysync-info-table th {
-	white-space: nowrap;
 }
 
 /* ─── Remove List (Install tab) ─── */
