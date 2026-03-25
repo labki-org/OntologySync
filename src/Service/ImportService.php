@@ -5,7 +5,8 @@ namespace MediaWiki\Extension\OntologySync\Service;
 use MediaWiki\Extension\OntologySync\Store\BundleStore;
 use MediaWiki\Extension\OntologySync\Store\ModuleStore;
 use MediaWiki\Extension\OntologySync\Store\PageStore;
-use Title;
+use MediaWiki\MediaWikiServices;
+use MediaWiki\Title\Title;
 
 /**
  * Orchestrates install, update, and remove operations for ontology bundles.
@@ -261,7 +262,7 @@ class ImportService {
 			return false;
 		}
 
-		$wikiPage = \MediaWiki\MediaWikiServices::getInstance()
+		$wikiPage = MediaWikiServices::getInstance()
 			->getWikiPageFactory()
 			->newFromTitle( $title );
 		$content = $wikiPage->getContent();

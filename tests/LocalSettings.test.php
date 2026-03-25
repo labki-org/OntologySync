@@ -4,6 +4,7 @@ $wgServer = 'http://localhost:8890';
 
 // OntologySync
 wfLoadExtension( 'OntologySync', '/mw-user-extensions/OntologySync/extension.json' );
+$wgOntologySyncRepoPath = '/var/lib/ontologysync/labki-ontology';
 
 // Debugging
 $wgDebugLogGroups['ontologysync'] = '/var/log/mediawiki/ontologysync.log';

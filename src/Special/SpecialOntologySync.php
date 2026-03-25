@@ -12,7 +12,9 @@ use MediaWiki\Extension\OntologySync\Store\BundleStore;
 use MediaWiki\Extension\OntologySync\Store\ModuleStore;
 use MediaWiki\Extension\OntologySync\Store\PageStore;
 use MediaWiki\Html\Html;
+use MediaWiki\MediaWikiServices;
 use MediaWiki\SpecialPage\SpecialPage;
+use MediaWiki\Title\Title;
 
 /**
  * Special:OntologySync — Central management UI for ontology bundles.
@@ -502,7 +504,7 @@ class SpecialOntologySync extends SpecialPage {
 			$bundle = $this->bundleStore->getBundleById( (int)$page['osp_bundle_id'] );
 			$bundleLabel = $bundle ? $bundle['osb_bundle_id'] : '?';
 
-			$title = \Title::makeTitleSafe( $nsId, $page['osp_page_name'] );
+			$title = Title::makeTitleSafe( $nsId, $page['osp_page_name'] );
 			$pageLink = $title
 				? Html::element( 'a', [ 'href' => $title->getLocalURL() ], $page['osp_page_name'] )
 				: htmlspecialchars( $page['osp_page_name'] );
@@ -510,7 +512,7 @@ class SpecialOntologySync extends SpecialPage {
 			// Edit detection
 			$statusText = '—';
 			if ( $title !== null && $title->exists() && $page['osp_content_hash'] !== null ) {
-				$wikiPage = \MediaWiki\MediaWikiServices::getInstance()
+				$wikiPage = MediaWikiServices::getInstance()
 					->getWikiPageFactory()->newFromTitle( $title );
 				$content = $wikiPage->getContent();
 				if ( $content !== null ) {

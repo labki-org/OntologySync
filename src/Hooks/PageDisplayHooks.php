@@ -7,6 +7,7 @@ use MediaWiki\Extension\OntologySync\Store\BundleStore;
 use MediaWiki\Extension\OntologySync\Store\PageStore;
 use MediaWiki\Html\Html;
 use MediaWiki\SpecialPage\SpecialPage;
+use MediaWiki\Title\Title;
 
 /**
  * Adds a management footer to pages imported by OntologySync.
@@ -42,7 +43,7 @@ class PageDisplayHooks {
 
 		$isManaged = false;
 		foreach ( self::MANAGED_CATEGORIES as $managedCat ) {
-			$catTitle = \Title::makeTitleSafe( NS_CATEGORY, $managedCat );
+			$catTitle = Title::makeTitleSafe( NS_CATEGORY, $managedCat );
 			if ( $catTitle && isset( $categories[$catTitle->getPrefixedDBkey()] ) ) {
 				$isManaged = true;
 				break;
