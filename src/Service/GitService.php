@@ -28,6 +28,7 @@ class GitService {
 		$result = Shell::command( 'git', 'clone', '--depth', '1', $url, $path )
 			->limits( [ 'time' => 120, 'memory' => 0 ] )
 			->disableNetwork( false )
+			->disableSandbox()
 			->execute();
 
 		return $result->getExitCode() === 0;
@@ -44,6 +45,7 @@ class GitService {
 		$result = Shell::command( 'git', '-C', $repoPath, 'fetch', 'origin' )
 			->limits( [ 'time' => 60, 'memory' => 0 ] )
 			->disableNetwork( false )
+			->disableSandbox()
 			->execute();
 
 		return $result->getExitCode() === 0;
@@ -60,6 +62,7 @@ class GitService {
 		$result = Shell::command( 'git', '-C', $repoPath, 'pull', 'origin', 'main' )
 			->limits( [ 'time' => 60, 'memory' => 0 ] )
 			->disableNetwork( false )
+			->disableSandbox()
 			->execute();
 
 		return $result->getExitCode() === 0;
