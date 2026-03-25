@@ -972,6 +972,6 @@ class SpecialOntologySync extends SpecialPage {
 
 	/** @inheritDoc */
 	protected function getGroupName(): string {
-		return 'wiki';
+		return 'labki';
 	}
 }
