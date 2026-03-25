@@ -50,11 +50,6 @@
 			"i18n"
 		]
 	},
-	"MaintenanceScripts": {
-		"OntologySync:import": {
-			"class": "MediaWiki\\Extension\\OntologySync\\Maintenance\\RecordStagedImports"
-		}
-	},
 	"ExtensionMessagesFiles": {
 		"OntologySyncAlias": "OntologySync.alias.php"
 	},

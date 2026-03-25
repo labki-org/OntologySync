@@ -9,12 +9,13 @@ use MediaWiki\Maintenance\Maintenance;
 use MediaWiki\MediaWikiServices;
 
 /**
- * All-in-one maintenance script for staged OntologySync bundles.
+ * Records page hashes and module info for staged OntologySync bundles.
  *
- * Runs update.php to trigger SMW page imports, then records page hashes
- * and module info, flips bundle status to installed, and cleans staging.
+ * Run after update.php has imported the staged pages:
+ *   php maintenance/run.php update --quick
+ *   php maintenance/run.php OntologySync:import
  *
- * Usage after staging on Special:OntologySync:
+ * Or with the full class name:
  *   php maintenance/run.php "MediaWiki\Extension\OntologySync\Maintenance\RecordStagedImports"
  */
 class RecordStagedImports extends Maintenance {
@@ -22,14 +23,8 @@ class RecordStagedImports extends Maintenance {
 	public function __construct() {
 		parent::__construct();
 		$this->addDescription(
-			'Runs update.php to import staged OntologySync bundles, then ' .
-			'records page hashes and module info in the database.'
-		);
-		$this->addOption(
-			'skip-update',
-			'Skip running update.php (use if you already ran it separately)',
-			false,
-			false
+			'Records page hashes and module info for staged OntologySync bundles. ' .
+			'Run after update.php has imported the pages.'
 		);
 	}
 
@@ -61,42 +56,22 @@ class RecordStagedImports extends Maintenance {
 			$config->get( 'CacheDirectory' )
 		);
 
-		$bundleNames = array_map( static fn ( $b ) => $b['osb_bundle_id'], $staged );
-		$this->output( 'OntologySync: Staged bundles: ' . implode( ', ', $bundleNames ) . "\n" );
-
-		// Step 1: Run update.php to trigger SMW page imports
-		if ( !$this->hasOption( 'skip-update' ) ) {
-			$this->output( "\n=== Running update.php ===\n\n" );
-			$mwPath = MW_INSTALL_PATH;
-			$cmd = PHP_BINARY . ' ' . escapeshellarg( "$mwPath/maintenance/run.php" )
-				. ' update --quick';
-			$retVal = 0;
-			// @phan-suppress-next-line PhanTypeMismatchArgumentInternal
-			passthru( $cmd, $retVal );
-			if ( $retVal !== 0 ) {
-				$this->fatalError( "update.php failed with exit code $retVal" );
-			}
-			$this->output( "\n=== update.php complete ===\n\n" );
-		}
-
-		// Step 2: Record each staged bundle
 		foreach ( $staged as $bundle ) {
 			$bundleId = $bundle['osb_bundle_id'];
 			$version = $bundle['osb_version'];
 			$commit = $bundle['osb_repo_commit'] ?? '';
 			$userId = (int)( $bundle['osb_installed_by'] ?? 0 );
 
-			$this->output( "OntologySync: Recording $bundleId v$version...\n" );
+			$this->output( "Recording $bundleId v$version...\n" );
 
 			$importService->recordInstall(
 				$repoPath, $bundleId, $version, $commit, $userId, $stagingPath
 			);
 
-			$this->output( "OntologySync: $bundleId v$version recorded.\n" );
+			$this->output( "$bundleId v$version recorded.\n" );
 		}
 
-		// Step 3: Clean up staging
 		$stagingService->clearStaging( $stagingPath );
-		$this->output( "OntologySync: Staging cleaned up. Done.\n" );
+		$this->output( "Staging cleaned up. Done.\n" );
 	}
 }
