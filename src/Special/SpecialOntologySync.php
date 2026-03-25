@@ -91,6 +91,9 @@ class SpecialOntologySync extends SpecialPage {
 		$action = $subPage ?: 'overview';
 		$this->showNavigation( $action );
 
+		// Show pending staged bundles banner (visible on all tabs)
+		$this->showStagedBanner( $repoPath );
+
 		switch ( $action ) {
 			case 'browse':
 				$this->showBrowse( $repoPath );
@@ -135,6 +138,53 @@ class SpecialOntologySync extends SpecialPage {
 				Html::rawElement( 'nav', [ 'class' => 'ontologysync-tabs' ], $links )
 			)
 		);
+	}
+
+	/**
+	 * Show a banner for any bundles in "staged" state, prompting the user
+	 * to run update.php and then confirm the import.
+	 */
+	private function showStagedBanner( string $repoPath ): void {
+		$staged = $this->bundleStore->getStagedBundles();
+		if ( $staged === [] ) {
+			return;
+		}
+
+		$output = $this->getOutput();
+		foreach ( $staged as $b ) {
+			$stagingPath = $this->resolveStagingPath();
+			$stagingReady = $this->stagingService->isStagingReady( $stagingPath );
+
+			if ( $stagingReady ) {
+				// Staging dir still has the vocab.json — user hasn't run update.php yet
+				$output->addHTML( Html::warningBox(
+					Html::rawElement( 'strong', [],
+						$this->msg( 'ontologysync-staged-banner-pending' )
+							->params( $b['osb_bundle_id'], $b['osb_version'] )->parse()
+					)
+				) );
+			} else {
+				// Staging dir is empty or gone — update.php likely already ran
+				$output->addHTML( Html::successBox(
+					Html::rawElement( 'strong', [],
+						$this->msg( 'ontologysync-staged-banner-ready' )
+							->params( $b['osb_bundle_id'], $b['osb_version'] )->parse()
+					)
+				) );
+			}
+
+			$output->addHTML( $this->renderActionButton(
+				'confirm-install',
+				$this->msg( 'ontologysync-action-confirm' )->text(),
+				[ 'bundle' => $b['osb_bundle_id'], 'version' => $b['osb_version'] ]
+			) );
+
+			$output->addHTML( ' ' . $this->renderActionButton(
+				'cancel-stage',
+				$this->msg( 'ontologysync-action-cancel-stage' )->text(),
+				[ 'bundle' => $b['osb_bundle_id'] ]
+			) );
+		}
 	}
 
 	// ────────────────────────────────────────────
@@ -461,25 +511,12 @@ class SpecialOntologySync extends SpecialPage {
 			);
 		}
 
-		// Stage button
+		// Stage button (confirm is handled by the global staged banner)
 		$output->addHTML( $this->renderActionButton(
 			'stage',
 			$this->msg( 'ontologysync-action-stage' )->text(),
 			[ 'bundle' => $bundleId, 'version' => $bundle->getVersion() ]
 		) );
-
-		// Check if already staged
-		$stagingPath = $this->resolveStagingPath();
-		if ( $this->stagingService->isStagingReady( $stagingPath ) ) {
-			$output->addHTML( Html::successBox(
-				$this->msg( 'ontologysync-staging-ready' )->parse()
-			) );
-			$output->addHTML( $this->renderActionButton(
-				'confirm-install',
-				$this->msg( 'ontologysync-action-confirm' )->text(),
-				[ 'bundle' => $bundleId, 'version' => $bundle->getVersion() ]
-			) );
-		}
 	}
 
 	// ────────────────────────────────────────────
@@ -596,6 +633,29 @@ class SpecialOntologySync extends SpecialPage {
 				if ( $bundleId && $version ) {
 					$stagingPath = $this->resolveStagingPath();
 					if ( $this->importService->stageBundle( $repoPath, $bundleId, $version, $stagingPath ) ) {
+						// Record staged status in DB so the confirm banner persists
+						$now = wfTimestampNow();
+						$bundle = $this->repoInspector->getBundle( $repoPath, $bundleId );
+						$existing = $this->bundleStore->getInstalledBundle( $bundleId );
+						if ( $existing !== null ) {
+							$this->bundleStore->updateBundle( $bundleId, [
+								'osb_version' => $version,
+								'osb_status' => 'staged',
+								'osb_updated_at' => $now,
+							] );
+						} else {
+							$this->bundleStore->insertBundle( [
+								'osb_bundle_id' => $bundleId,
+								'osb_version' => $version,
+								'osb_label' => $bundle ? $bundle->getLabel() : $bundleId,
+								'osb_description' => $bundle ? $bundle->getDescription() : '',
+								'osb_repo_commit' => $this->gitService->getLocalHead( $repoPath ) ?? '',
+								'osb_installed_by' => $this->getUser()->getId(),
+								'osb_installed_at' => $now,
+								'osb_updated_at' => $now,
+								'osb_status' => 'staged',
+							] );
+						}
 						$output->addHTML( Html::successBox(
 							$this->msg( 'ontologysync-stage-success' )->parse() ) );
 					} else {
@@ -618,6 +678,20 @@ class SpecialOntologySync extends SpecialPage {
 					$this->stagingService->clearStaging( $stagingPath );
 					$output->addHTML( Html::successBox(
 						$this->msg( 'ontologysync-install-recorded' )->text() ) );
+				}
+				break;
+
+			case 'cancel-stage':
+				$bundleId = $request->getVal( 'bundle' );
+				if ( $bundleId ) {
+					$stagingPath = $this->resolveStagingPath();
+					$this->stagingService->clearStaging( $stagingPath );
+					$existing = $this->bundleStore->getInstalledBundle( $bundleId );
+					if ( $existing !== null && $existing['osb_status'] === 'staged' ) {
+						$this->bundleStore->deleteBundle( $bundleId );
+					}
+					$output->addHTML( Html::successBox(
+						$this->msg( 'ontologysync-stage-cancelled' )->text() ) );
 				}
 				break;
 

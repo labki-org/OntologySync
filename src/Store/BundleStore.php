@@ -79,6 +79,24 @@ class BundleStore {
 		return $dbw->affectedRows() > 0;
 	}
 
+	/**
+	 * @return array[]
+	 */
+	public function getStagedBundles(): array {
+		$res = $this->dbProvider->getReplicaDatabase()->newSelectQueryBuilder()
+			->select( '*' )
+			->from( 'ontologysync_bundles' )
+			->where( [ 'osb_status' => 'staged' ] )
+			->caller( __METHOD__ )
+			->fetchResultSet();
+
+		$bundles = [];
+		foreach ( $res as $row ) {
+			$bundles[] = (array)$row;
+		}
+		return $bundles;
+	}
+
 	public function getBundleById( int $osbId ): ?array {
 		$row = $this->dbProvider->getReplicaDatabase()->newSelectQueryBuilder()
 			->select( '*' )
