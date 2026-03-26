@@ -19,20 +19,46 @@ MediaWiki extension that connects wikis to the [Labki ontology](https://github.c
 2. Add to `LocalSettings.php`:
    ```php
    wfLoadExtension( 'OntologySync' );
+   $wgOntologySyncRepoPath = '/var/lib/ontologysync/labki-ontology';
    ```
 
-3. Download a bundle version artifact from the labki-ontology repository
-   (e.g., `bundles/Default/versions/1.0.0/`) to a local path on your server.
-
-4. Configure the bundle path in `LocalSettings.php`:
-   ```php
-   $wgOntologySyncBundlePath = '/path/to/bundles/Default/versions/1.0.0';
-   ```
-
-5. Run the MediaWiki update script to import all ontology entities:
+3. Run the MediaWiki update script to create the extension's database tables:
    ```bash
    php maintenance/run.php update
    ```
+
+4. Visit **Special:OntologySync** to clone the ontology repo and install bundles.
+
+## Configuration
+
+All settings are optional except `$wgOntologySyncRepoPath`, which must be set for the extension to function.
+
+Add these to `LocalSettings.php` after `wfLoadExtension( 'OntologySync' );`:
+
+| Variable | Type | Default | Description |
+|---|---|---|---|
+| `$wgOntologySyncRepoPath` | `string` | `null` | **Required.** Local filesystem path where the labki-ontology repository will be cloned. The web server user must have write access to this path. |
+| `$wgOntologySyncRepoUrl` | `string` | `https://github.com/labki-org/labki-ontology` | Git URL of the ontology repository to clone. Change this to use a fork or private mirror. |
+| `$wgOntologySyncStagingPath` | `string\|null` | `null` | Path where import artifacts (vocab.json + .wikitext files) are staged before import. When `null`, defaults to `$wgCacheDirectory/ontologysync-staging`. |
+| `$wgOntologySyncBundlePath` | `string\|null` | `null` | Absolute path to a bundle version directory for legacy/manual import (e.g., `bundles/Default/versions/1.0.0/`). The directory must contain a `*.vocab.json` manifest and `.wikitext` entity files. When set, it is registered with SMW's `$smwgImportFileDirs` so that `update.php` imports the bundle. |
+| `$wgOntologySyncAutoRegisterStaging` | `bool` | `true` | When `true`, the staging directory is automatically registered with SMW's `$smwgImportFileDirs` if it contains a `vocab.json`. Set to `false` to manage SMW import directories manually. |
+
+### Minimal example
+
+```php
+wfLoadExtension( 'OntologySync' );
+$wgOntologySyncRepoPath = '/var/lib/ontologysync/labki-ontology';
+```
+
+### Full example
+
+```php
+wfLoadExtension( 'OntologySync' );
+$wgOntologySyncRepoPath = '/var/lib/ontologysync/labki-ontology';
+$wgOntologySyncRepoUrl = 'https://github.com/my-org/my-ontology-fork';
+$wgOntologySyncStagingPath = '/var/cache/ontologysync-staging';
+$wgOntologySyncAutoRegisterStaging = true;
+```
 
 ## How it works
 
