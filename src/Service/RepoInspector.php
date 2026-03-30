@@ -11,6 +11,16 @@ use MediaWiki\Extension\OntologySync\Model\ModuleInfo;
  */
 class RepoInspector {
 
+	/** @var array<string,string> Entity type => directory name in repo */
+	private const ENTITY_TYPE_DIRS = [
+		'categories' => 'categories',
+		'properties' => 'properties',
+		'subobjects' => 'subobjects',
+		'templates' => 'templates',
+		'resources' => 'resources',
+		'dashboards' => 'dashboards',
+	];
+
 	/**
 	 * List all bundles defined in the repo.
 	 *
@@ -45,7 +55,7 @@ class RepoInspector {
 		}
 
 		$modules = [];
-		foreach ( glob( $modulesDir . '/*.vocab.json' ) as $file ) {
+		foreach ( glob( $modulesDir . '/*.json' ) as $file ) {
 			$data = $this->readJson( $file );
 			if ( $data !== null && isset( $data['id'] ) ) {
 				$modules[] = ModuleInfo::fromJson( $data );
@@ -71,7 +81,7 @@ class RepoInspector {
 	 * Get a specific module by ID.
 	 */
 	public function getModule( string $repoPath, string $moduleId ): ?ModuleInfo {
-		$file = $repoPath . '/modules/' . $moduleId . '.vocab.json';
+		$file = $repoPath . '/modules/' . $moduleId . '.json';
 		$data = $this->readJson( $file );
 		if ( $data === null || !isset( $data['id'] ) ) {
 			return null;
@@ -80,16 +90,38 @@ class RepoInspector {
 	}
 
 	/**
-	 * Get the path to a bundle's versioned artifact directory.
+	 * Get the full filesystem path to an entity's wikitext file.
 	 *
-	 * @return string|null Filesystem path, or null if not found
+	 * @param string $repoPath Path to the labki-ontology clone
+	 * @param string $entityType Entity type (categories, properties, etc.)
+	 * @param string $entityKey Entity key (e.g. "Person", "SOP/My_SOP")
+	 * @return string|null Full path, or null if file doesn't exist
 	 */
-	public function getBundleVersionArtifact( string $repoPath, string $bundleId, string $version ): ?string {
-		$path = $repoPath . '/bundles/' . $bundleId . '/versions/' . $version;
-		if ( !is_dir( $path ) ) {
+	public function getEntityFile(
+		string $repoPath, string $entityType, string $entityKey
+	): ?string {
+		$dir = self::ENTITY_TYPE_DIRS[$entityType] ?? null;
+		if ( $dir === null ) {
+			return null;
+		}
+
+		$path = $repoPath . '/' . $dir . '/' . $entityKey . '.wikitext';
+		if ( !is_readable( $path ) ) {
 			return null;
 		}
 		return $path;
+	}
+
+	/**
+	 * Get the relative path for an entity's wikitext file (for vocab.json importFrom).
+	 *
+	 * @param string $entityType Entity type (categories, properties, etc.)
+	 * @param string $entityKey Entity key (e.g. "Person", "SOP/My_SOP")
+	 * @return string Relative path like "categories/Person.wikitext"
+	 */
+	public function getEntityRelativePath( string $entityType, string $entityKey ): string {
+		$dir = self::ENTITY_TYPE_DIRS[$entityType] ?? $entityType;
+		return $dir . '/' . $entityKey . '.wikitext';
 	}
 
 	/**
@@ -111,16 +143,18 @@ class RepoInspector {
 	}
 
 	/**
-	 * Find the vocab.json file within a bundle artifact directory.
+	 * Find a vocab.json file within a directory.
 	 */
-	public function findVocabJson( string $artifactPath ): ?string {
-		$files = glob( $artifactPath . '/*.vocab.json' );
-		if ( $files === false || $files === [] ) {
-			return null;
+	public function findVocabJson( string $dirPath ): ?string {
+		if ( is_readable( $dirPath . '/vocab.json' ) ) {
+			return $dirPath . '/vocab.json';
 		}
-		return $files[0];
+		return null;
 	}
 
+	/**
+	 * Read and parse a JSON file.
+	 */
 	private function readJson( string $path ): ?array {
 		if ( !is_readable( $path ) ) {
 			return null;

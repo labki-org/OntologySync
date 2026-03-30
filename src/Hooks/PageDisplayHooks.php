@@ -13,7 +13,7 @@ use MediaWiki\Title\Title;
  * Adds a management footer to pages imported by OntologySync.
  *
  * Pages with OntologySync-managed-* categories display a footer showing
- * provenance (bundle name, version, module) and a link to Special:OntologySync.
+ * provenance (bundle name, commit) and a link to Special:OntologySync.
  */
 class PageDisplayHooks {
 
@@ -68,9 +68,11 @@ class PageDisplayHooks {
 			$bundle = $this->bundleStore->getBundleById( (int)$pageRecord['osp_bundle_id'] );
 			if ( $bundle !== null ) {
 				$bundleLabel = htmlspecialchars( $bundle['osb_bundle_id'] );
-				$version = htmlspecialchars( $bundle['osb_version'] );
+				$commit = htmlspecialchars(
+					substr( $bundle['osb_repo_commit'] ?? '', 0, 8 )
+				);
 				$footerContent .= ' ' . wfMessage( 'ontologysync-footer-provenance' )
-					->params( $bundleLabel, $version )->parse();
+					->params( $bundleLabel, $commit )->parse();
 			}
 		}
 

@@ -58,18 +58,17 @@ class RecordStagedImports extends Maintenance {
 
 		foreach ( $staged as $bundle ) {
 			$bundleId = $bundle['osb_bundle_id'];
-			$version = $bundle['osb_version'];
 			$commit = $bundle['osb_repo_commit'] ?? '';
 			$userId = (int)( $bundle['osb_installed_by'] ?? 0 );
 
-			$this->output( "Recording $bundleId v$version...\n" );
+			$this->output( "Recording $bundleId (commit $commit)...\n" );
 
 			$importService->recordInstall(
-				$repoPath, $bundleId, $version, $commit, $userId, $stagingRoot
+				$repoPath, $bundleId, $commit, $userId, $stagingRoot
 			);
 
 			$stagingService->clearBundleStaging( $stagingRoot, $bundleId );
-			$this->output( "$bundleId v$version recorded.\n" );
+			$this->output( "$bundleId recorded.\n" );
 		}
 
 		$this->output( "Done.\n" );

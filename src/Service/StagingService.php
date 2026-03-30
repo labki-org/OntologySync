@@ -2,6 +2,8 @@
 
 namespace MediaWiki\Extension\OntologySync\Service;
 
+use MediaWiki\Extension\OntologySync\Model\VocabResult;
+
 /**
  * Manages the staging directory where import artifacts are prepared
  * before running update.php.
@@ -10,16 +12,28 @@ namespace MediaWiki\Extension\OntologySync\Service;
  *   staging/Default/  (vocab.json + .wikitext files)
  *   staging/Lab/      (vocab.json + .wikitext files)
  *
- * This allows multiple bundles to be staged and imported in one update.php run.
+ * VocabBuilder generates the vocab.json at install time from module
+ * definitions. StagingService copies the referenced wikitext files
+ * from the flat repo structure and performs pre-merge with existing
+ * wiki page content where applicable.
  */
 class StagingService {
 
+	private const MARKER_START = '<!-- OntologySync Start -->';
+	private const MARKER_END = '<!-- OntologySync End -->';
+
 	private RepoInspector $repoInspector;
 	private HashService $hashService;
+	private VocabBuilder $vocabBuilder;
 
-	public function __construct( RepoInspector $repoInspector, HashService $hashService ) {
+	public function __construct(
+		RepoInspector $repoInspector,
+		HashService $hashService,
+		VocabBuilder $vocabBuilder
+	) {
 		$this->repoInspector = $repoInspector;
 		$this->hashService = $hashService;
+		$this->vocabBuilder = $vocabBuilder;
 	}
 
 	/**
@@ -43,9 +57,24 @@ class StagingService {
 	}
 
 	/**
-	 * Copy a bundle version artifact to its staging subdirectory.
+	 * Stage a bundle for import: write vocab.json and copy wikitext files.
+	 *
+	 * @param string $repoPath Path to the labki-ontology clone
+	 * @param string $bundleId Bundle identifier
+	 * @param string $stagingRoot Staging root directory
+	 * @param VocabResult $vocabResult Built vocabulary
+	 * @param array<string,string> $existingPageContent Map of "NS_CONSTANT:PageName" => wikitext
+	 * @param string[] $skipPages Pages to exclude (format: "NS_CONSTANT:PageName")
+	 * @return bool Success
 	 */
-	public function stageBundle( string $bundleArtifactPath, string $stagingRoot, string $bundleId ): bool {
+	public function stageBundle(
+		string $repoPath,
+		string $bundleId,
+		string $stagingRoot,
+		VocabResult $vocabResult,
+		array $existingPageContent = [],
+		array $skipPages = []
+	): bool {
 		$bundlePath = $this->getBundleStagingPath( $stagingRoot, $bundleId );
 
 		// Clear this bundle's staging subdir (leave other bundles intact)
@@ -56,7 +85,99 @@ class StagingService {
 			return false;
 		}
 
-		return $this->copyDirectory( $bundleArtifactPath, $bundlePath );
+		// Write vocab.json (excluding skipped pages)
+		$vocabPath = $bundlePath . '/vocab.json';
+		if ( !$this->vocabBuilder->writeVocabJson( $vocabPath, $vocabResult, $skipPages ) ) {
+			return false;
+		}
+
+		$skipSet = array_flip( $skipPages );
+
+		// Copy wikitext files from repo to staging, with pre-merge
+		foreach ( $vocabResult->getEntries() as $entry ) {
+			$entryKey = $entry->getNamespace() . ':' . $entry->getPage();
+			if ( isset( $skipSet[$entryKey] ) ) {
+				continue;
+			}
+
+			$srcPath = $repoPath . '/' . $entry->getImportFrom();
+			$dstPath = $bundlePath . '/' . $entry->getImportFrom();
+
+			// Create subdirectories as needed
+			$dstDir = dirname( $dstPath );
+			if ( !is_dir( $dstDir ) ) {
+				if ( !mkdir( $dstDir, 0755, true ) && !is_dir( $dstDir ) ) {
+					return false;
+				}
+			}
+
+			if ( !is_readable( $srcPath ) ) {
+				continue;
+			}
+
+			$repoContent = file_get_contents( $srcPath );
+			if ( $repoContent === false ) {
+				continue;
+			}
+
+			// Pre-merge: if existing wiki page content is available and has markers,
+			// replace the marker block in the existing content with the new repo content
+			$existingContent = $existingPageContent[$entryKey] ?? null;
+			if ( $existingContent !== null ) {
+				$merged = $this->preMergeContent( $repoContent, $existingContent );
+				if ( $merged !== null ) {
+					$repoContent = $merged;
+				}
+			}
+
+			if ( file_put_contents( $dstPath, $repoContent ) === false ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Pre-merge: inject the OntologySync marker block from the staged file
+	 * into the existing wiki page content.
+	 *
+	 * This preserves user content outside the markers while updating the
+	 * managed section.
+	 *
+	 * @param string $repoContent New content from the repo
+	 * @param string $existingContent Current wiki page content
+	 * @return string|null Merged content, or null if merge not possible
+	 */
+	private function preMergeContent( string $repoContent, string $existingContent ): ?string {
+		// Both must have markers for merge to work
+		$repoStart = strpos( $repoContent, self::MARKER_START );
+		$repoEnd = strpos( $repoContent, self::MARKER_END );
+		$existStart = strpos( $existingContent, self::MARKER_START );
+		$existEnd = strpos( $existingContent, self::MARKER_END );
+
+		if ( $repoStart === false || $repoEnd === false
+			|| $existStart === false || $existEnd === false
+		) {
+			return null;
+		}
+
+		if ( $repoEnd <= $repoStart || $existEnd <= $existStart ) {
+			return null;
+		}
+
+		// Extract the new marker block (including markers)
+		$newBlock = substr(
+			$repoContent,
+			$repoStart,
+			$repoEnd + strlen( self::MARKER_END ) - $repoStart
+		);
+
+		// Replace the old marker block in existing content with the new one
+		$before = substr( $existingContent, 0, $existStart );
+		$after = substr( $existingContent, $existEnd + strlen( self::MARKER_END ) );
+
+		return $before . $newBlock . $after;
 	}
 
 	/**
@@ -137,35 +258,6 @@ class StagingService {
 		}
 
 		return $hashes;
-	}
-
-	private function copyDirectory( string $src, string $dst ): bool {
-		$entries = scandir( $src );
-		if ( $entries === false ) {
-			return false;
-		}
-
-		foreach ( $entries as $file ) {
-			if ( $file === '.' || $file === '..' ) {
-				continue;
-			}
-
-			$srcPath = $src . '/' . $file;
-			$dstPath = $dst . '/' . $file;
-
-			if ( is_dir( $srcPath ) ) {
-				if ( !mkdir( $dstPath, 0755, true ) && !is_dir( $dstPath ) ) {
-					return false;
-				}
-				if ( !$this->copyDirectory( $srcPath, $dstPath ) ) {
-					return false;
-				}
-			} elseif ( !copy( $srcPath, $dstPath ) ) {
-				return false;
-			}
-		}
-
-		return true;
 	}
 
 	private function removeDirectory( string $path ): bool {

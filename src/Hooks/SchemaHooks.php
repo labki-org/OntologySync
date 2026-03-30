@@ -33,5 +33,13 @@ class SchemaHooks {
 			$updater->addExtensionTable( 'ontologysync_modules', $tablesFile );
 			$updater->addExtensionTable( 'ontologysync_pages', $tablesFile );
 		}
+
+		// Migration: remove version columns
+		$patchFile = $dir . '/' . $dbDir . '/patch-remove-version-columns.sql';
+		if ( file_exists( $patchFile ) ) {
+			$updater->dropExtensionField(
+				'ontologysync_bundles', 'osb_version', $patchFile
+			);
+		}
 	}
 }

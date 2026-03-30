@@ -189,6 +189,11 @@
 	color: var( --os-success-600 );
 }
 
+.ontologysync-status-chip.is-unknown {
+	background: var( --os-slate-200, #e2e8f0 );
+	color: var( --os-slate-600, #475569 );
+}
+
 .ontologysync-status-chip.is-warning {
 	background: var( --os-warning-100 );
 	color: var( --os-warning-600 );
@@ -659,6 +664,41 @@ tr.ontologysync-status-modified {
 
 .ontologysync-managed-footer a {
 	margin-left: 0.5em;
+}
+
+/* ─── Impact Level Badges ─── */
+.ontologysync-badge-impact-none,
+.ontologysync-badge-impact-patch,
+.ontologysync-badge-impact-minor,
+.ontologysync-badge-impact-major {
+	display: inline-block;
+	padding: 1px 8px;
+	border-radius: 999px;
+	font-size: 0.7em;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+	vertical-align: middle;
+}
+
+.ontologysync-badge-impact-none {
+	background: var( --os-slate-100 );
+	color: var( --os-slate-500 );
+}
+
+.ontologysync-badge-impact-patch {
+	background: var( --os-success-100 );
+	color: var( --os-success-600 );
+}
+
+.ontologysync-badge-impact-minor {
+	background: var( --os-warning-100 );
+	color: var( --os-warning-600 );
+}
+
+.ontologysync-badge-impact-major {
+	background: var( --os-error-50 );
+	color: var( --os-error-600 );
 }
 
 /* ─── Responsive ─── */
