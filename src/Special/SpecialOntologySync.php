@@ -441,11 +441,19 @@ class SpecialOntologySync extends SpecialPage {
 				$items .= Html::element( 'li', [], $moduleId . ' (not found)' );
 				continue;
 			}
+
+			$categories = $module->getCategories();
+			$catText = $categories !== []
+				? Html::element( 'span', [ 'class' => 'ontologysync-muted' ],
+					implode( ', ', $categories ) )
+				: '';
+
 			$items .= Html::rawElement( 'li', [],
 				Html::element( 'strong', [],
 					$module->getLabel() ?: $module->getId() ) .
 				' — ' . $module->getEntityCount() .
-				' ' . $this->msg( 'ontologysync-entities' )->text()
+				' ' . $this->msg( 'ontologysync-entities' )->text() .
+				( $catText !== '' ? Html::rawElement( 'br' ) . $catText : '' )
 			);
 		}
 
@@ -551,38 +559,6 @@ class SpecialOntologySync extends SpecialPage {
 				)
 			)
 		);
-
-		// Installed bundles with remove option
-		$installedBundles = $this->bundleStore->getAllInstalledBundles();
-		if ( $installedBundles !== [] ) {
-			$removeItems = '';
-			foreach ( $installedBundles as $b ) {
-				$removeItems .= Html::rawElement( 'div',
-					[ 'class' => 'ontologysync-remove-item' ],
-					Html::rawElement( 'div',
-						[ 'class' => 'ontologysync-remove-item-info' ],
-						Html::element( 'strong', [], $b['osb_bundle_id'] ) .
-						Html::element( 'code', [],
-							substr( $b['osb_repo_commit'] ?? '', 0, 8 ) )
-					) .
-					$this->renderActionButton(
-						'remove',
-						$this->msg( 'ontologysync-action-remove' )->text(),
-						[ 'bundle' => $b['osb_bundle_id'] ],
-						'danger'
-					)
-				);
-			}
-
-			$output->addHTML(
-				Html::rawElement( 'div', [ 'class' => 'ontologysync-section' ],
-					Html::element( 'h3', [ 'class' => 'ontologysync-section-title' ],
-						$this->msg( 'ontologysync-remove-heading' )->text() ) .
-					Html::rawElement( 'div', [ 'class' => 'ontologysync-card' ],
-						$removeItems )
-				)
-			);
-		}
 	}
 
 	private function showInstallPreview( string $repoPath, string $bundleId ): void {
@@ -883,20 +859,6 @@ class SpecialOntologySync extends SpecialPage {
 				}
 				break;
 
-			case 'remove':
-				$bundleId = $request->getVal( 'bundle' );
-				if ( $bundleId ) {
-					$result = $this->importService->removeBundle( $bundleId );
-					if ( $result['errors'] === [] ) {
-						$output->addHTML( Html::successBox(
-							$this->msg( 'ontologysync-remove-success' )
-								->params( $bundleId )->text() ) );
-					} else {
-						$output->addHTML( Html::errorBox(
-							implode( ', ', $result['errors'] ) ) );
-					}
-				}
-				break;
 		}
 	}
 
