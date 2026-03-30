@@ -56,7 +56,7 @@
 	"ontologysync-browse-intro": "Explore available bundles and modules in the ontology repository.",
 	"ontologysync-install-intro": "Install or update ontology bundles from the repository.",
 	"ontologysync-pages-intro": "Pages managed by OntologySync with edit detection status.",
-	"ontologysync-preview-guidance": "<strong>How this works:</strong><ol><li>Click <em>Prepare Import</em> to stage the bundle files.</li><li>Run <code>php maintenance/run.php update --quick</code> on the server to import the pages.</li><li>Run <code>php maintenance/run.php \"MediaWiki\\Extension\\OntologySync\\Maintenance\\RecordStagedImports\"</code> to finalize.</li></ol>",
+	"ontologysync-preview-guidance": "<strong>How this works:</strong><ol><li>Click <em>Confirm &amp; Stage</em> to stage the bundle files.</li><li>Run <code>php maintenance/run.php update --quick</code> on the server to import the pages.</li><li>Run <code>php maintenance/run.php \"MediaWiki\\Extension\\OntologySync\\Maintenance\\RecordStagedImports\"</code> to finalize.</li></ol>",
 	"ontologysync-install-heading": "Available Bundles",
 	"ontologysync-remove-heading": "Remove Installed Bundles",
 	"ontologysync-install-preview-heading": "Install Preview: $1",
