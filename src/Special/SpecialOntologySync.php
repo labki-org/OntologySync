@@ -2,6 +2,7 @@
 
 namespace MediaWiki\Extension\OntologySync\Special;
 
+use MediaWiki\Extension\OntologySync\Model\ChangeClassification;
 use MediaWiki\Extension\OntologySync\Service\GitService;
 use MediaWiki\Extension\OntologySync\Service\HashService;
 use MediaWiki\Extension\OntologySync\Service\ImportService;
@@ -20,10 +21,14 @@ use MediaWiki\Title\Title;
  * Special:OntologySync — Central management UI for ontology bundles.
  *
  * Tabs:
- * - Overview: Repository status, installed bundles
+ * - Overview: Repository status, installed ontology card with action buttons
  * - Browse: Available bundles/modules from local clone
- * - Install: Stage bundles for import via update.php
  * - Pages: View managed pages, detect user edits
+ *
+ * Sub-pages:
+ * - review-update: Review changes for updating all installed bundles
+ * - add-bundle: Pick an uninstalled bundle to install
+ * - review-install/{bundleId}: Review changes for installing a specific bundle
  */
 class SpecialOntologySync extends SpecialPage {
 
@@ -99,20 +104,29 @@ class SpecialOntologySync extends SpecialPage {
 
 		$this->showStagedBanner();
 
-		switch ( $action ) {
-			case 'browse':
-				$this->showBrowse( $repoPath );
-				break;
-			case 'install':
-				$this->showInstall( $repoPath );
-				break;
-			case 'pages':
-				$this->showPages();
-				break;
-			case 'overview':
-			default:
-				$this->showOverview( $repoPath );
-				break;
+		// Route sub-pages
+		if ( str_starts_with( $action, 'review-install/' ) ) {
+			$bundleId = substr( $action, strlen( 'review-install/' ) );
+			$this->showReviewInstall( $repoPath, $bundleId );
+		} else {
+			switch ( $action ) {
+				case 'browse':
+					$this->showBrowse( $repoPath );
+					break;
+				case 'pages':
+					$this->showPages();
+					break;
+				case 'review-update':
+					$this->showReviewUpdate( $repoPath );
+					break;
+				case 'add-bundle':
+					$this->showAddBundle( $repoPath );
+					break;
+				case 'overview':
+				default:
+					$this->showOverview( $repoPath );
+					break;
+			}
 		}
 
 		// Close content + shell
@@ -124,14 +138,22 @@ class SpecialOntologySync extends SpecialPage {
 		$tabs = [
 			'overview' => $this->msg( 'ontologysync-tab-overview' )->text(),
 			'browse' => $this->msg( 'ontologysync-tab-browse' )->text(),
-			'install' => $this->msg( 'ontologysync-tab-install' )->text(),
 			'pages' => $this->msg( 'ontologysync-tab-pages' )->text(),
 		];
+
+		// Determine which tab is active — sub-pages like review-update
+		// and add-bundle belong to the overview tab
+		$activeTab = $currentAction;
+		if ( in_array( $activeTab, [ 'review-update', 'add-bundle' ], true )
+			|| str_starts_with( $activeTab, 'review-install/' )
+		) {
+			$activeTab = 'overview';
+		}
 
 		$links = '';
 		foreach ( $tabs as $action => $label ) {
 			$url = $this->getPageTitle( $action )->getLocalURL();
-			$isActive = ( $action === $currentAction );
+			$isActive = ( $action === $activeTab );
 			$links .= Html::element(
 				'a',
 				[
@@ -189,7 +211,7 @@ class SpecialOntologySync extends SpecialPage {
 			return;
 		}
 
-		// Status card
+		// Repo Status card
 		$repoUrl = $this->getConfig()->get( 'OntologySyncRepoUrl' );
 		$hasUpdates = $status->hasUpdates();
 		$remoteKnown = $status->getRemoteHead() !== null;
@@ -241,11 +263,14 @@ class SpecialOntologySync extends SpecialPage {
 			)
 		);
 
-		// Summary stats
+		// Installed Ontology card
 		$bundles = $this->bundleStore->getAllInstalledBundles();
+		$repoHead = $status->getLocalHead();
 		$totalModules = 0;
 		$totalPages = 0;
 		$bundleCounts = [];
+		$hasUpdateAvailable = false;
+
 		foreach ( $bundles as $b ) {
 			$mc = count(
 				$this->moduleStore->getModulesForBundle( (int)$b['osb_id'] ) );
@@ -254,42 +279,50 @@ class SpecialOntologySync extends SpecialPage {
 			$bundleCounts[(int)$b['osb_id']] = [ 'modules' => $mc, 'pages' => $pc ];
 			$totalModules += $mc;
 			$totalPages += $pc;
+
+			$installedCommit = $b['osb_repo_commit'] ?? '';
+			if ( $repoHead !== null && $installedCommit !== ''
+				&& $installedCommit !== $repoHead
+			) {
+				$hasUpdateAvailable = true;
+			}
 		}
 
-		$output->addHTML(
-			Html::rawElement( 'div', [ 'class' => 'ontologysync-summary-grid' ],
-				$this->renderStat(
-					(string)count( $bundles ),
-					$this->msg( 'ontologysync-stat-bundles' )->text()
-				) .
-				$this->renderStat(
-					(string)$totalModules,
-					$this->msg( 'ontologysync-stat-modules' )->text()
-				) .
-				$this->renderStat(
-					(string)$totalPages,
-					$this->msg( 'ontologysync-stat-pages' )->text()
-				)
-			)
-		);
-
-		// Installed bundles section
 		$output->addHTML( Html::openElement( 'div', [ 'class' => 'ontologysync-section' ] ) );
 		$output->addHTML(
 			Html::element( 'h3', [ 'class' => 'ontologysync-section-title' ],
-				$this->msg( 'ontologysync-installed-bundles' )->text() )
+				$this->msg( 'ontologysync-installed-ontology' )->text() )
 		);
 
 		if ( $bundles === [] ) {
 			$output->addHTML( $this->renderEmptyState(
 				$this->msg( 'ontologysync-no-bundles-installed' )->text() ) );
+
+			// Still show the Add Bundle button even when nothing is installed
+			$addBundleUrl = $this->getPageTitle( 'add-bundle' )->getLocalURL();
+			$output->addHTML(
+				Html::rawElement( 'div', [ 'class' => 'ontologysync-action-buttons' ],
+					Html::element( 'a', [
+						'href' => $addBundleUrl,
+						'class' => 'ontologysync-btn ontologysync-btn-primary',
+					], $this->msg( 'ontologysync-add-bundle' )->text() )
+				)
+			);
+
 			$output->addHTML( Html::closeElement( 'div' ) );
 			return;
 		}
 
-		// Detect updates: compare installed commit with current repo HEAD
-		$repoHead = $status->getLocalHead();
+		// Summary line
+		$output->addHTML(
+			Html::element( 'p', [ 'class' => 'ontologysync-section-intro' ],
+				count( $bundles ) . ' '
+				. $this->msg( 'ontologysync-stat-bundles' )->text()
+				. ', ' . $totalPages . ' '
+				. $this->msg( 'ontologysync-stat-pages' )->text() )
+		);
 
+		// Installed bundles table
 		$rows = '';
 		foreach ( $bundles as $b ) {
 			$counts = $bundleCounts[(int)$b['osb_id']];
@@ -333,6 +366,28 @@ class SpecialOntologySync extends SpecialPage {
 					Html::rawElement( 'tbody', [], $rows )
 				)
 			)
+		);
+
+		// Action buttons
+		$actionButtons = '';
+
+		if ( $hasUpdateAvailable ) {
+			$updateUrl = $this->getPageTitle( 'review-update' )->getLocalURL();
+			$actionButtons .= Html::element( 'a', [
+				'href' => $updateUrl,
+				'class' => 'ontologysync-btn ontologysync-btn-primary',
+			], $this->msg( 'ontologysync-update-ontology' )->text() );
+		}
+
+		$addBundleUrl = $this->getPageTitle( 'add-bundle' )->getLocalURL();
+		$actionButtons .= Html::element( 'a', [
+			'href' => $addBundleUrl,
+			'class' => 'ontologysync-btn',
+		], $this->msg( 'ontologysync-add-bundle' )->text() );
+
+		$output->addHTML(
+			Html::rawElement( 'div', [ 'class' => 'ontologysync-action-buttons' ],
+				$actionButtons )
 		);
 
 		$output->addHTML( Html::closeElement( 'div' ) );
@@ -465,12 +520,11 @@ class SpecialOntologySync extends SpecialPage {
 	}
 
 	// ----
-	// Install tab
+	// Review Update sub-page
 	// ----
 
-	private function showInstall( string $repoPath ): void {
+	private function showReviewUpdate( string $repoPath ): void {
 		$output = $this->getOutput();
-		$request = $this->getRequest();
 
 		if ( !$this->gitService->isCloned( $repoPath ) ) {
 			$output->addHTML( Html::warningBox(
@@ -478,99 +532,191 @@ class SpecialOntologySync extends SpecialPage {
 			return;
 		}
 
-		// Check if a specific bundle was requested for preview
-		$bundleId = $request->getVal( 'bundle' );
-		if ( $bundleId !== null ) {
-			$this->showInstallPreview( $repoPath, $bundleId );
+		$installed = $this->bundleStore->getAllInstalledBundles();
+		$repoHead = $this->gitService->getLocalHead( $repoPath );
+
+		// Heading with commit range
+		$output->addHTML(
+			Html::rawElement( 'h3', [ 'class' => 'ontologysync-section-title' ],
+				$this->msg( 'ontologysync-review-update-heading' )->text() )
+		);
+
+		if ( $installed === [] ) {
+			$output->addHTML( $this->renderEmptyState(
+				$this->msg( 'ontologysync-no-bundles-installed' )->text() ) );
 			return;
 		}
 
-		$output->addHTML(
-			Html::element( 'p', [ 'class' => 'ontologysync-section-intro' ],
-				$this->msg( 'ontologysync-install-intro' )->text() )
-		);
-
-		// Available bundles table
-		$bundles = $this->repoInspector->listBundles( $repoPath );
-		$repoHead = $this->gitService->getLocalHead( $repoPath );
-
-		$rows = '';
-		foreach ( $bundles as $bundle ) {
-			$installed = $this->bundleStore->getInstalledBundle( $bundle->getId() );
-			$action = '';
-
-			if ( $installed === null ) {
-				$action = Html::element( 'a', [
-					'href' => $this->getPageTitle( 'install' )->getLocalURL( [
-						'bundle' => $bundle->getId(),
-					] ),
-					'class' => 'ontologysync-btn ontologysync-btn-primary',
-				], $this->msg( 'ontologysync-action-install' )->text() );
-			} else {
-				$installedCommit = $installed['osb_repo_commit'] ?? '';
-				if ( $repoHead !== null && $installedCommit !== $repoHead ) {
-					$action = Html::element( 'a', [
-						'href' => $this->getPageTitle( 'install' )->getLocalURL( [
-							'bundle' => $bundle->getId(),
-						] ),
-						'class' => 'ontologysync-btn',
-					], $this->msg( 'ontologysync-action-update' )->text() );
-				} else {
-					$action = Html::element( 'a', [
-						'href' => $this->getPageTitle( 'install' )->getLocalURL( [
-							'bundle' => $bundle->getId(),
-						] ),
-						'class' => 'ontologysync-btn',
-					], $this->msg( 'ontologysync-action-reinstall' )->text() );
-				}
+		// Determine earliest installed commit for the "from" label
+		$fromCommit = null;
+		foreach ( $installed as $b ) {
+			$c = $b['osb_repo_commit'] ?? '';
+			if ( $c !== '' && ( $fromCommit === null || $c < $fromCommit ) ) {
+				$fromCommit = $c;
 			}
+		}
 
-			$statusText = $installed
-				? substr( $installed['osb_repo_commit'] ?? '', 0, 8 )
-				: $this->msg( 'ontologysync-not-installed' )->text();
-
-			$rows .= Html::rawElement( 'tr', [],
-				Html::element( 'td', [],
-					$bundle->getLabel() ?: $bundle->getId() ) .
-				Html::element( 'td', [], $statusText ) .
-				Html::rawElement( 'td', [], $action )
+		if ( $fromCommit !== null && $repoHead !== null ) {
+			$output->addHTML(
+				Html::rawElement( 'p', [ 'class' => 'ontologysync-section-intro' ],
+					$this->msg( 'ontologysync-update-from-to' )
+						->params(
+							Html::element( 'code', [], substr( $fromCommit, 0, 8 ) ),
+							Html::element( 'code', [], substr( $repoHead, 0, 8 ) )
+						)->text()
+				)
 			);
 		}
 
+		// Gather changes across all installed bundles
+		$allChanges = [];
+		$seenPages = [];
+
+		foreach ( $installed as $b ) {
+			$preview = $this->importService->prepareInstall( $repoPath, $b['osb_bundle_id'] );
+			foreach ( $preview['changes'] as $change ) {
+				$pageKey = $change->getNamespace() . ':' . $change->getPage();
+				if ( !isset( $seenPages[$pageKey] ) ) {
+					$seenPages[$pageKey] = true;
+					$allChanges[] = $change;
+				}
+			}
+		}
+
+		// Check if any bundles actually need updating
+		$anyOutdated = false;
+		foreach ( $installed as $b ) {
+			$installedCommit = $b['osb_repo_commit'] ?? '';
+			if ( $repoHead !== null && $installedCommit !== ''
+				&& $installedCommit !== $repoHead
+			) {
+				$anyOutdated = true;
+				break;
+			}
+		}
+
+		if ( !$anyOutdated ) {
+			$output->addHTML( $this->renderEmptyState(
+				$this->msg( 'ontologysync-no-updates' )->text() ) );
+			return;
+		}
+
+		// Render the change review
+		$output->addHTML( $this->renderChangeReview( $allChanges ) );
+
+		// Guidance callout
 		$output->addHTML(
-			Html::rawElement( 'div', [ 'class' => 'ontologysync-section' ],
-				Html::element( 'h3', [ 'class' => 'ontologysync-section-title' ],
-					$this->msg( 'ontologysync-install-heading' )->text() ) .
-				Html::rawElement( 'div', [ 'class' => 'ontologysync-card' ],
-					Html::rawElement( 'table',
-						[ 'class' => 'wikitable ontologysync-table' ],
-						Html::rawElement( 'thead', [],
-							Html::rawElement( 'tr', [],
-								Html::element( 'th', [],
-									$this->msg( 'ontologysync-col-bundle' )->text() ) .
-								Html::element( 'th', [],
-									$this->msg( 'ontologysync-col-installed-commit' )->text() ) .
-								Html::element( 'th', [],
-									$this->msg( 'ontologysync-col-action' )->text() )
-							)
-						) .
-						Html::rawElement( 'tbody', [], $rows )
-					)
+			Html::rawElement( 'div', [ 'class' => 'ontologysync-callout' ],
+				$this->msg( 'ontologysync-preview-guidance' )->parse()
+			)
+		);
+
+		// Confirm & Stage button
+		$output->addHTML(
+			Html::rawElement( 'div', [ 'class' => 'ontologysync-action-buttons' ],
+				$this->renderActionButton(
+					'stage-update',
+					$this->msg( 'ontologysync-confirm-stage' )->text(),
+					[],
+					'primary'
 				)
 			)
 		);
 	}
 
-	private function showInstallPreview( string $repoPath, string $bundleId ): void {
-		$output = $this->getOutput();
-		$bundle = $this->repoInspector->getBundle( $repoPath, $bundleId );
+	// ----
+	// Add Bundle sub-page
+	// ----
 
+	private function showAddBundle( string $repoPath ): void {
+		$output = $this->getOutput();
+
+		if ( !$this->gitService->isCloned( $repoPath ) ) {
+			$output->addHTML( Html::warningBox(
+				$this->msg( 'ontologysync-repo-not-cloned' )->parse() ) );
+			return;
+		}
+
+		$output->addHTML(
+			Html::element( 'h3', [ 'class' => 'ontologysync-section-title' ],
+				$this->msg( 'ontologysync-add-bundle' )->text() )
+		);
+
+		$repoBundles = $this->repoInspector->listBundles( $repoPath );
+		$uninstalled = [];
+		foreach ( $repoBundles as $bundle ) {
+			$installed = $this->bundleStore->getInstalledBundle( $bundle->getId() );
+			if ( $installed === null ) {
+				$uninstalled[] = $bundle;
+			}
+		}
+
+		if ( $uninstalled === [] ) {
+			$output->addHTML( $this->renderEmptyState(
+				$this->msg( 'ontologysync-all-bundles-installed' )->text() ) );
+			return;
+		}
+
+		foreach ( $uninstalled as $bundle ) {
+			$selectUrl = $this->getPageTitle(
+				'review-install/' . $bundle->getId()
+			)->getLocalURL();
+
+			$output->addHTML(
+				Html::rawElement( 'div', [ 'class' => 'ontologysync-card' ],
+					Html::rawElement( 'div', [ 'class' => 'ontologysync-card-header' ],
+						Html::rawElement( 'div',
+							[ 'class' => 'ontologysync-card-title-row' ],
+							Html::element( 'h4',
+								[ 'class' => 'ontologysync-card-title' ],
+								$bundle->getLabel() ?: $bundle->getId() ) .
+							Html::element( 'a', [
+								'href' => $selectUrl,
+								'class' => 'ontologysync-btn ontologysync-btn-primary',
+							], $this->msg( 'ontologysync-select-bundle' )->text() )
+						) .
+						Html::rawElement( 'div', [ 'class' => 'ontologysync-card-meta' ],
+							Html::element( 'span',
+								[ 'class' => 'ontologysync-muted' ],
+								$bundle->getId() )
+						)
+					) .
+					( $bundle->getDescription()
+						? Html::element( 'p', [ 'class' => 'ontologysync-card-desc' ],
+							$bundle->getDescription() )
+						: '' ) .
+					$this->renderModuleList( $repoPath, $bundle->getModules() )
+				)
+			);
+		}
+	}
+
+	// ----
+	// Review Install sub-page
+	// ----
+
+	private function showReviewInstall( string $repoPath, string $bundleId ): void {
+		$output = $this->getOutput();
+
+		if ( !$this->gitService->isCloned( $repoPath ) ) {
+			$output->addHTML( Html::warningBox(
+				$this->msg( 'ontologysync-repo-not-cloned' )->parse() ) );
+			return;
+		}
+
+		$bundle = $this->repoInspector->getBundle( $repoPath, $bundleId );
 		if ( $bundle === null ) {
 			$output->addHTML( Html::errorBox(
 				$this->msg( 'ontologysync-error-bundle-not-found' )
 					->params( $bundleId )->parse() ) );
 			return;
 		}
+
+		$output->addHTML(
+			Html::rawElement( 'h3', [ 'class' => 'ontologysync-section-title' ],
+				$this->msg( 'ontologysync-review-install-heading' )
+					->params( $bundle->getLabel() ?: $bundle->getId() )->text() )
+		);
 
 		$preview = $this->importService->prepareInstall( $repoPath, $bundleId );
 
@@ -580,47 +726,8 @@ class SpecialOntologySync extends SpecialPage {
 			}
 		}
 
-		// Action bar: button + stats + guidance
-		$hasWarnings = $preview['userModifiedCount'] > 0;
-		$warningClass = $hasWarnings ? ' is-warning' : '';
-		$output->addHTML(
-			Html::rawElement( 'div', [ 'class' => 'ontologysync-action-bar' ],
-				Html::rawElement( 'div', [ 'class' => 'ontologysync-action-bar-left' ],
-					Html::rawElement( 'h3', [ 'class' => 'ontologysync-section-title' ],
-						$this->msg( 'ontologysync-install-preview-heading' )
-							->params( $bundle->getLabel() ?: $bundle->getId() )->text() ) .
-					Html::rawElement( 'div', [ 'class' => 'ontologysync-preview-stats' ],
-						$this->renderPreviewStat(
-							(string)$preview['newCount'],
-							$this->msg( 'ontologysync-status-new' )->text()
-						) .
-						$this->renderPreviewStat(
-							(string)$preview['changedCount'],
-							$this->msg( 'ontologysync-impact-changed' )->text()
-						) .
-						$this->renderPreviewStat(
-							(string)$preview['deletedCount'],
-							$this->msg( 'ontologysync-impact-deleted' )->text()
-						) .
-						$this->renderPreviewStat(
-							(string)$preview['unchangedCount'],
-							$this->msg( 'ontologysync-impact-unchanged' )->text()
-						) .
-						$this->renderPreviewStat(
-							(string)$preview['userModifiedCount'],
-							$this->msg( 'ontologysync-impact-user-modified' )->text(),
-							$warningClass
-						)
-					)
-				) .
-				$this->renderActionButton(
-					'stage',
-					$this->msg( 'ontologysync-action-stage' )->text(),
-					[ 'bundle' => $bundleId ],
-					'primary'
-				)
-			)
-		);
+		// Render the change review
+		$output->addHTML( $this->renderChangeReview( $preview['changes'] ) );
 
 		// Guidance callout
 		$output->addHTML(
@@ -629,88 +736,178 @@ class SpecialOntologySync extends SpecialPage {
 			)
 		);
 
-		if ( $preview['changes'] !== [] ) {
+		// Confirm & Stage button
+		$output->addHTML(
+			Html::rawElement( 'div', [ 'class' => 'ontologysync-action-buttons' ],
+				$this->renderActionButton(
+					'stage-install',
+					$this->msg( 'ontologysync-confirm-stage' )->text(),
+					[ 'bundle' => $bundleId ],
+					'primary'
+				)
+			)
+		);
+	}
+
+	// ----
+	// Change Review helper
+	// ----
+
+	/**
+	 * Render a change review with collapsible sections grouped by change type/impact.
+	 *
+	 * @param ChangeClassification[] $changes
+	 */
+	private function renderChangeReview( array $changes ): string {
+		if ( $changes === [] ) {
+			return '';
+		}
+
+		// Group changes into sections
+		$groups = [
+			'new' => [],
+			'major' => [],
+			'removed' => [],
+			'minor' => [],
+			'patch' => [],
+			'unchanged' => [],
+		];
+
+		foreach ( $changes as $change ) {
+			$changeType = $change->getChangeType();
+			$impactLevel = $change->getImpactLevel();
+
+			if ( $changeType === 'new' ) {
+				$groups['new'][] = $change;
+			} elseif ( $changeType === 'deleted' ) {
+				$groups['removed'][] = $change;
+			} elseif ( $changeType === 'changed' && $impactLevel === 'major' ) {
+				$groups['major'][] = $change;
+			} elseif ( $changeType === 'changed' && $impactLevel === 'minor' ) {
+				$groups['minor'][] = $change;
+			} elseif ( $changeType === 'changed' ) {
+				// patch or any other impact level for changed items
+				$groups['patch'][] = $change;
+			} elseif ( $changeType === 'none' ) {
+				$groups['unchanged'][] = $change;
+			}
+		}
+
+		// Count totals
+		$newCount = count( $groups['new'] );
+		$changedCount = count( $groups['major'] ) + count( $groups['minor'] )
+			+ count( $groups['patch'] );
+		$removedCount = count( $groups['removed'] );
+		$unchangedCount = count( $groups['unchanged'] );
+
+		// Stats bar
+		$html = Html::rawElement( 'div', [ 'class' => 'ontologysync-review-stats' ],
+			$this->msg( 'ontologysync-review-stats' )
+				->params(
+					(string)$newCount,
+					(string)$changedCount,
+					(string)$removedCount,
+					(string)$unchangedCount
+				)->text()
+		);
+
+		// Section definitions: [key, msgKey, cssModifier, expandedByDefault]
+		$sections = [
+			[ 'new', 'ontologysync-section-new', 'is-new', true ],
+			[ 'major', 'ontologysync-section-major', 'is-major', true ],
+			[ 'removed', 'ontologysync-section-removed', 'is-removed', true ],
+			[ 'minor', 'ontologysync-section-minor', 'is-minor', false ],
+			[ 'patch', 'ontologysync-section-patch', 'is-patch', false ],
+			[ 'unchanged', 'ontologysync-section-unchanged', 'is-unchanged', false ],
+		];
+
+		foreach ( $sections as [ $key, $msgKey, $cssModifier, $expanded ] ) {
+			$items = $groups[$key];
+			if ( $items === [] ) {
+				continue;
+			}
+
+			$sectionLabel = $this->msg( $msgKey )
+				->params( (string)count( $items ) )->text();
+
 			$rows = '';
-			foreach ( $preview['changes'] as $change ) {
+			foreach ( $items as $change ) {
 				$nsId = $this->pageResolver->resolveNamespace( $change->getNamespace() );
 				$nsLabel = $nsId !== null
 					? $this->pageResolver->getNamespaceLabel( $nsId )
 					: $change->getNamespace();
 
-				$changeType = $change->getChangeType();
-				$statusClass = '';
-				$statusText = '';
-
-				switch ( $changeType ) {
-					case 'new':
-						$statusText = $this->msg( 'ontologysync-status-new' )->text();
-						break;
-					case 'changed':
-						$statusClass = $change->isUserModified()
-							? 'ontologysync-status-modified' : '';
-						$impactBadge = Html::element( 'span',
-							[ 'class' => 'ontologysync-badge-impact-' . $change->getImpactLevel() ],
-							$change->getImpactLevel() );
-						$statusText = $this->msg( 'ontologysync-impact-changed' )->text()
-							. ' ' . $impactBadge;
-						if ( $change->isUserModified() ) {
-							$statusText .= ' '
-								. $this->msg( 'ontologysync-impact-user-modified' )->text();
-						}
-						break;
-					case 'deleted':
-						$statusText = $this->msg( 'ontologysync-impact-deleted' )->text();
-						$statusClass = 'ontologysync-status-modified';
-						break;
-					case 'none':
-						$statusText = $this->msg( 'ontologysync-impact-unchanged' )->text();
-						if ( $change->isUserModified() ) {
-							$statusText .= ' ('
-								. $this->msg( 'ontologysync-impact-user-modified' )->text()
-								. ')';
-						}
-						break;
+				$pageCell = htmlspecialchars( $change->getPage() );
+				if ( $change->isUserModified() ) {
+					$pageCell .= ' ' . Html::rawElement( 'span',
+						[ 'class' => 'ontologysync-user-modified-indicator' ],
+						'&#x26A0;'
+					);
 				}
 
-				$adminCol = '';
-				if ( $change->requiresAdminDecision() ) {
-					$adminCol = Html::element( 'span',
-						[ 'class' => 'ontologysync-badge-update' ],
-						$this->msg( 'ontologysync-requires-review' )->text() );
+				$impactBadge = '';
+				if ( $change->getChangeType() === 'changed' ) {
+					$impactBadge = Html::element( 'span',
+						[ 'class' => 'ontologysync-badge-impact-'
+							. $change->getImpactLevel() ],
+						$change->getImpactLevel() );
+				} elseif ( $change->getChangeType() === 'new' ) {
+					$impactBadge = Html::element( 'span',
+						[ 'class' => 'ontologysync-badge-impact-none' ],
+						$this->msg( 'ontologysync-status-new' )->text() );
+				} elseif ( $change->getChangeType() === 'deleted' ) {
+					$impactBadge = Html::element( 'span',
+						[ 'class' => 'ontologysync-badge-impact-major' ],
+						$this->msg( 'ontologysync-impact-deleted' )->text() );
+				} else {
+					$impactBadge = Html::element( 'span',
+						[ 'class' => 'ontologysync-badge-impact-none' ],
+						$this->msg( 'ontologysync-impact-unchanged' )->text() );
 				}
 
-				$rows .= Html::rawElement( 'tr', [ 'class' => $statusClass ],
+				$rows .= Html::rawElement( 'tr', [],
 					Html::element( 'td', [], $nsLabel ) .
-					Html::element( 'td', [], $change->getPage() ) .
-					Html::element( 'td', [], $change->getEntityType() ) .
-					Html::rawElement( 'td', [], $statusText ) .
-					Html::rawElement( 'td', [], $adminCol )
+					Html::rawElement( 'td', [], $pageCell ) .
+					Html::element( 'td', [], $change->getModuleId() ) .
+					Html::rawElement( 'td', [], $impactBadge )
 				);
 			}
 
-			$output->addHTML(
-				Html::rawElement( 'div', [ 'class' => 'ontologysync-card' ],
-					Html::rawElement( 'table',
-						[ 'class' => 'wikitable ontologysync-table ontologysync-table-compact' ],
-						Html::rawElement( 'thead', [],
-							Html::rawElement( 'tr', [],
-								Html::element( 'th', [],
-									$this->msg( 'ontologysync-col-namespace' )->text() ) .
-								Html::element( 'th', [],
-									$this->msg( 'ontologysync-col-page' )->text() ) .
-								Html::element( 'th', [],
-									$this->msg( 'ontologysync-col-type' )->text() ) .
-								Html::element( 'th', [],
-									$this->msg( 'ontologysync-col-status' )->text() ) .
-								Html::element( 'th', [],
-									$this->msg( 'ontologysync-col-review' )->text() )
-							)
-						) .
-						Html::rawElement( 'tbody', [], $rows )
+			$table = Html::rawElement( 'table',
+				[ 'class' => 'wikitable ontologysync-table ontologysync-table-compact' ],
+				Html::rawElement( 'thead', [],
+					Html::rawElement( 'tr', [],
+						Html::element( 'th', [],
+							$this->msg( 'ontologysync-col-namespace' )->text() ) .
+						Html::element( 'th', [],
+							$this->msg( 'ontologysync-col-page' )->text() ) .
+						Html::element( 'th', [],
+							$this->msg( 'ontologysync-col-module' )->text() ) .
+						Html::element( 'th', [],
+							$this->msg( 'ontologysync-col-status' )->text() )
 					)
-				)
+				) .
+				Html::rawElement( 'tbody', [], $rows )
 			);
+
+			$detailsAttrs = [
+				'class' => 'ontologysync-change-section ' . $cssModifier,
+			];
+
+			$detailsContent = Html::rawElement( 'summary', [], $sectionLabel ) . $table;
+
+			if ( $expanded ) {
+				$html .= Html::rawElement( 'details',
+					$detailsAttrs + [ 'open' => '' ],
+					$detailsContent );
+			} else {
+				$html .= Html::rawElement( 'details',
+					$detailsAttrs,
+					$detailsContent );
+			}
 		}
+
+		return Html::rawElement( 'div', [ 'class' => 'ontologysync-change-review' ], $html );
 	}
 
 	// ----
@@ -838,7 +1035,33 @@ class SpecialOntologySync extends SpecialPage {
 				}
 				break;
 
-			case 'stage':
+			case 'stage-update':
+				$installed = $this->bundleStore->getAllInstalledBundles();
+				$stagingPath = $this->resolveStagingPath();
+				$allSuccess = true;
+				foreach ( $installed as $b ) {
+					if ( !$this->importService->stageBundle(
+						$repoPath, $b['osb_bundle_id'], $stagingPath
+					) ) {
+						$allSuccess = false;
+						continue;
+					}
+					$this->bundleStore->updateBundle( $b['osb_bundle_id'], [
+						'osb_status' => 'staged',
+						'osb_repo_commit' => $this->gitService->getLocalHead( $repoPath ) ?? '',
+						'osb_updated_at' => wfTimestampNow(),
+					] );
+				}
+				if ( $allSuccess ) {
+					$output->addHTML( Html::successBox(
+						$this->msg( 'ontologysync-stage-success' )->parse() ) );
+				} else {
+					$output->addHTML( Html::errorBox(
+						$this->msg( 'ontologysync-stage-failed' )->text() ) );
+				}
+				break;
+
+			case 'stage-install':
 				$bundleId = $request->getVal( 'bundle' );
 				if ( $bundleId ) {
 					$this->handleStageAction( $repoPath, $bundleId );

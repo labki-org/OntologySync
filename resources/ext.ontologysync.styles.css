@@ -701,6 +701,103 @@ tr.ontologysync-status-modified {
 	color: var( --os-error-600 );
 }
 
+/* ─── Change Review ─── */
+.ontologysync-change-review {
+	margin-bottom: var( --os-space-4 );
+}
+
+.ontologysync-review-stats {
+	display: flex;
+	align-items: center;
+	gap: var( --os-space-3 );
+	padding: var( --os-space-3 ) var( --os-space-4 );
+	background: var( --os-slate-50 );
+	border: 1px solid var( --os-slate-200 );
+	border-radius: var( --os-radius-md );
+	margin-bottom: var( --os-space-4 );
+	font-size: 0.9em;
+	font-weight: 500;
+	color: var( --os-slate-700 );
+}
+
+.ontologysync-change-section {
+	margin-bottom: var( --os-space-3 );
+	border: 1px solid var( --os-slate-200 );
+	border-radius: var( --os-radius-md );
+	overflow: hidden;
+}
+
+.ontologysync-change-section summary {
+	display: flex;
+	align-items: center;
+	padding: var( --os-space-3 ) var( --os-space-4 );
+	font-weight: 600;
+	font-size: 0.9em;
+	cursor: pointer;
+	user-select: none;
+	background: var( --os-slate-50 );
+	border-bottom: 1px solid var( --os-slate-200 );
+	transition: background var( --os-transition-fast );
+}
+
+.ontologysync-change-section summary:hover {
+	background: var( --os-slate-100 );
+}
+
+.ontologysync-change-section summary::marker {
+	color: var( --os-slate-400 );
+}
+
+.ontologysync-change-section.is-new summary {
+	border-left: 3px solid var( --os-success-600 );
+	color: var( --os-success-600 );
+}
+
+.ontologysync-change-section.is-major summary {
+	border-left: 3px solid var( --os-error-600 );
+	color: var( --os-error-600 );
+}
+
+.ontologysync-change-section.is-removed summary {
+	border-left: 3px solid var( --os-error-600 );
+	color: var( --os-error-600 );
+}
+
+.ontologysync-change-section.is-minor summary {
+	border-left: 3px solid var( --os-warning-600 );
+	color: var( --os-warning-600 );
+}
+
+.ontologysync-change-section.is-patch summary {
+	border-left: 3px solid var( --os-slate-400 );
+	color: var( --os-slate-600 );
+}
+
+.ontologysync-change-section.is-unchanged summary {
+	border-left: 3px solid var( --os-slate-300 );
+	color: var( --os-slate-500 );
+}
+
+.ontologysync-change-section .ontologysync-table {
+	margin: 0;
+	border: none;
+	border-radius: 0;
+}
+
+.ontologysync-user-modified-indicator {
+	color: var( --os-warning-600 );
+	font-weight: 700;
+	font-size: 1em;
+}
+
+.ontologysync-action-buttons {
+	display: flex;
+	align-items: center;
+	gap: var( --os-space-3 );
+	margin-top: var( --os-space-4 );
+	margin-bottom: var( --os-space-4 );
+}
+
 /* ─── Responsive ─── */
 @media ( max-width: 640px ) {
 	.ontologysync-status-card {
