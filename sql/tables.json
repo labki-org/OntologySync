@@ -13,11 +13,6 @@
 				"options": { "notnull": true, "length": 100 }
 			},
 			{
-				"name": "osb_version",
-				"type": "string",
-				"options": { "notnull": true, "length": 50 }
-			},
-			{
 				"name": "osb_label",
 				"type": "string",
 				"options": { "notnull": false, "length": 255 }
@@ -79,11 +74,6 @@
 				"name": "osm_module_id",
 				"type": "string",
 				"options": { "notnull": true, "length": 100 }
-			},
-			{
-				"name": "osm_version",
-				"type": "string",
-				"options": { "notnull": true, "length": 50 }
 			},
 			{
 				"name": "osm_bundle_id",
@@ -162,11 +152,6 @@
 				"name": "osp_source_file",
 				"type": "string",
 				"options": { "notnull": false, "length": 255 }
-			},
-			{
-				"name": "osp_installed_version",
-				"type": "string",
-				"options": { "notnull": false, "length": 50 }
 			},
 			{
 				"name": "osp_installed_at",

@@ -55,11 +55,8 @@ class OntologySyncHooks {
 							continue;
 						}
 						$subdir = $stagingRoot . '/' . $entry;
-						if ( is_dir( $subdir ) ) {
-							$vocabFiles = glob( $subdir . '/*.vocab.json' );
-							if ( $vocabFiles !== false && $vocabFiles !== [] ) {
-								$smwgImportFileDirs["ontologysync-$entry"] = $subdir;
-							}
+						if ( is_dir( $subdir ) && is_readable( $subdir . '/vocab.json' ) ) {
+							$smwgImportFileDirs["ontologysync-$entry"] = $subdir;
 						}
 					}
 				}

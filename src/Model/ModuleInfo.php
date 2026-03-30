@@ -4,80 +4,81 @@ namespace MediaWiki\Extension\OntologySync\Model;
 
 /**
  * Value object representing a module definition from the labki-ontology repo.
+ *
+ * Modules are simple JSON with entity lists:
+ * { id, label, description, categories: [...], properties: [...],
+ *   subobjects: [...], templates: [...], resources: [...], dashboards: [] }
  */
 class ModuleInfo {
 
 	private string $id;
-	private string $version;
 	private string $label;
 	private string $description;
-	/** @var array<string,string> Module ID => version */
-	private array $dependencies;
-	/** @var ImportEntry[] */
-	private array $importEntries;
+	/** @var string[] */
+	private array $categories;
+	/** @var string[] */
+	private array $properties;
+	/** @var string[] */
+	private array $subobjects;
+	/** @var string[] */
+	private array $templates;
+	/** @var string[] */
+	private array $resources;
+	/** @var string[] */
+	private array $dashboards;
 
 	/**
 	 * @param string $id
-	 * @param string $version
 	 * @param string $label
 	 * @param string $description
-	 * @param array<string,string> $dependencies
-	 * @param ImportEntry[] $importEntries
+	 * @param string[] $categories
+	 * @param string[] $properties
+	 * @param string[] $subobjects
+	 * @param string[] $templates
+	 * @param string[] $resources
+	 * @param string[] $dashboards
 	 */
 	public function __construct(
 		string $id,
-		string $version,
 		string $label,
 		string $description,
-		array $dependencies,
-		array $importEntries
+		array $categories,
+		array $properties,
+		array $subobjects,
+		array $templates,
+		array $resources,
+		array $dashboards
 	) {
 		$this->id = $id;
-		$this->version = $version;
 		$this->label = $label;
 		$this->description = $description;
-		$this->dependencies = $dependencies;
-		$this->importEntries = $importEntries;
+		$this->categories = $categories;
+		$this->properties = $properties;
+		$this->subobjects = $subobjects;
+		$this->templates = $templates;
+		$this->resources = $resources;
+		$this->dashboards = $dashboards;
 	}
 
 	/**
-	 * Create from a parsed modules/*.vocab.json file.
+	 * Create from a parsed modules/*.json file.
 	 */
 	public static function fromJson( array $data ): self {
-		$deps = $data['dependencies'] ?? [];
-		// Source format may use array (old) or object (new)
-		if ( is_array( $deps ) && !self::isAssoc( $deps ) ) {
-			$deps = [];
-		}
-
-		$entries = [];
-		foreach ( $data['import'] ?? [] as $entry ) {
-			$entries[] = ImportEntry::fromJson( $entry );
-		}
-
 		return new self(
 			$data['id'] ?? '',
-			$data['version'] ?? '',
 			$data['label'] ?? '',
 			$data['description'] ?? '',
-			$deps,
-			$entries
+			$data['categories'] ?? [],
+			$data['properties'] ?? [],
+			$data['subobjects'] ?? [],
+			$data['templates'] ?? [],
+			$data['resources'] ?? [],
+			$data['dashboards'] ?? []
 		);
-	}
-
-	private static function isAssoc( array $arr ): bool {
-		if ( $arr === [] ) {
-			return false;
-		}
-		return array_keys( $arr ) !== range( 0, count( $arr ) - 1 );
 	}
 
 	public function getId(): string {
 		return $this->id;
-	}
-
-	public function getVersion(): string {
-		return $this->version;
 	}
 
 	public function getLabel(): string {
@@ -88,21 +89,61 @@ class ModuleInfo {
 		return $this->description;
 	}
 
-	/**
-	 * @return array<string,string>
-	 */
-	public function getDependencies(): array {
-		return $this->dependencies;
+	/** @return string[] */
+	public function getCategories(): array {
+		return $this->categories;
+	}
+
+	/** @return string[] */
+	public function getProperties(): array {
+		return $this->properties;
+	}
+
+	/** @return string[] */
+	public function getSubobjects(): array {
+		return $this->subobjects;
+	}
+
+	/** @return string[] */
+	public function getTemplates(): array {
+		return $this->templates;
+	}
+
+	/** @return string[] */
+	public function getResources(): array {
+		return $this->resources;
+	}
+
+	/** @return string[] */
+	public function getDashboards(): array {
+		return $this->dashboards;
 	}
 
 	/**
-	 * @return ImportEntry[]
+	 * Get total entity count across all types.
 	 */
-	public function getImportEntries(): array {
-		return $this->importEntries;
-	}
-
 	public function getEntityCount(): int {
-		return count( $this->importEntries );
+		return count( $this->categories )
+			+ count( $this->properties )
+			+ count( $this->subobjects )
+			+ count( $this->templates )
+			+ count( $this->resources )
+			+ count( $this->dashboards );
+	}
+
+	/**
+	 * Get all entities grouped by type.
+	 *
+	 * @return array<string,string[]>
+	 */
+	public function getAllEntities(): array {
+		return [
+			'categories' => $this->categories,
+			'properties' => $this->properties,
+			'subobjects' => $this->subobjects,
+			'templates' => $this->templates,
+			'resources' => $this->resources,
+			'dashboards' => $this->dashboards,
+		];
 	}
 }

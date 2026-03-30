@@ -5,7 +5,6 @@
 CREATE TABLE /*_*/ontologysync_bundles (
   osb_id INT UNSIGNED AUTO_INCREMENT NOT NULL,
   osb_bundle_id VARCHAR(100) NOT NULL,
-  osb_version VARCHAR(50) NOT NULL,
   osb_label VARCHAR(255) DEFAULT NULL,
   osb_description TEXT DEFAULT NULL,
   osb_repo_commit VARCHAR(40) DEFAULT NULL,
@@ -22,7 +21,6 @@ CREATE TABLE /*_*/ontologysync_bundles (
 CREATE TABLE /*_*/ontologysync_modules (
   osm_id INT UNSIGNED AUTO_INCREMENT NOT NULL,
   osm_module_id VARCHAR(100) NOT NULL,
-  osm_version VARCHAR(50) NOT NULL,
   osm_bundle_id INT UNSIGNED NOT NULL,
   osm_label VARCHAR(255) DEFAULT NULL,
   osm_installed_at BINARY(14) NOT NULL,
@@ -42,7 +40,6 @@ CREATE TABLE /*_*/ontologysync_pages (
   osp_wiki_page_id INT UNSIGNED DEFAULT NULL,
   osp_content_hash VARCHAR(71) DEFAULT NULL,
   osp_source_file VARCHAR(255) DEFAULT NULL,
-  osp_installed_version VARCHAR(50) DEFAULT NULL,
   osp_installed_at BINARY(14) NOT NULL,
   osp_updated_at BINARY(14) NOT NULL,
   UNIQUE INDEX osp_page_unique (osp_page_namespace, osp_page_name),
