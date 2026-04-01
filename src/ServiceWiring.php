@@ -1,6 +1,7 @@
 <?php
 
 use MediaWiki\Extension\OntologySync\Service\ChangeClassificationService;
+use MediaWiki\Extension\OntologySync\Service\DependencyResolver;
 use MediaWiki\Extension\OntologySync\Service\GitService;
 use MediaWiki\Extension\OntologySync\Service\HashService;
 use MediaWiki\Extension\OntologySync\Service\ImportService;
@@ -8,6 +9,7 @@ use MediaWiki\Extension\OntologySync\Service\PageResolver;
 use MediaWiki\Extension\OntologySync\Service\RepoInspector;
 use MediaWiki\Extension\OntologySync\Service\StagingService;
 use MediaWiki\Extension\OntologySync\Service\VocabBuilder;
+use MediaWiki\Extension\OntologySync\Service\WikitextParser;
 use MediaWiki\Extension\OntologySync\Store\BundleStore;
 use MediaWiki\Extension\OntologySync\Store\ModuleStore;
 use MediaWiki\Extension\OntologySync\Store\PageStore;
@@ -32,6 +34,15 @@ return [
 			$services->get( 'OntologySync.HashService' ),
 			$services->get( 'OntologySync.RepoInspector' ),
 			$services->get( 'OntologySync.PageResolver' )
+		);
+	},
+
+	'OntologySync.DependencyResolver' => static function (
+		MediaWikiServices $services
+	): DependencyResolver {
+		return new DependencyResolver(
+			$services->get( 'OntologySync.WikitextParser' ),
+			$services->get( 'OntologySync.RepoInspector' )
 		);
 	},
 
@@ -105,6 +116,15 @@ return [
 		MediaWikiServices $services
 	): VocabBuilder {
 		return new VocabBuilder(
+			$services->get( 'OntologySync.RepoInspector' ),
+			$services->get( 'OntologySync.DependencyResolver' )
+		);
+	},
+
+	'OntologySync.WikitextParser' => static function (
+		MediaWikiServices $services
+	): WikitextParser {
+		return new WikitextParser(
 			$services->get( 'OntologySync.RepoInspector' )
 		);
 	},

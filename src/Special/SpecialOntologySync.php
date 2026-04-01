@@ -503,11 +503,12 @@ class SpecialOntologySync extends SpecialPage {
 					implode( ', ', $categories ) )
 				: '';
 
+			$catCount = count( $categories );
 			$items .= Html::rawElement( 'li', [],
 				Html::element( 'strong', [],
 					$module->getLabel() ?: $module->getId() ) .
-				' — ' . $module->getEntityCount() .
-				' ' . $this->msg( 'ontologysync-entities' )->text() .
+				' — ' . $catCount .
+				' ' . $this->msg( 'ontologysync-categories' )->text() .
 				( $catText !== '' ? Html::rawElement( 'br' ) . $catText : '' )
 			);
 		}

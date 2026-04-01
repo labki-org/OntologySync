@@ -43,7 +43,7 @@ The extension uses a commit-based approach instead of semver:
 1. Admin configures `$wgOntologySyncRepoPath` in LocalSettings.php
 2. Extension clones labki-ontology to that path (via Special page or CLI)
 3. Admin browses available bundles/modules on Special:OntologySync
-4. Selecting a bundle triggers VocabBuilder to generate vocab.json from module entity lists
+4. Selecting a bundle triggers DependencyResolver to resolve the full entity graph from module categories, then VocabBuilder generates vocab.json
 5. StagingService copies wikitext files to staging dir with pre-merge of user content
 6. `php maintenance/run.php update` triggers SMW's content importer
 7. Extension records installed state in DB with content hashes
@@ -56,7 +56,8 @@ The extension uses a commit-based approach instead of semver:
   - `SchemaHooks.php` -- DB table registration via LoadExtensionSchemaUpdates
 - `src/Model/` -- Value objects
   - `BundleInfo.php` -- Bundle definition (id, label, description, modules)
-  - `ModuleInfo.php` -- Module definition with entity lists (categories, properties, etc.)
+  - `ModuleInfo.php` -- Module definition (categories + dashboards; dependency resolution is done at install time)
+  - `ResolvedEntities.php` -- Fully resolved entity lists produced by DependencyResolver
   - `ImportEntry.php` -- Single vocab.json import entry
   - `VocabResult.php` -- Built vocabulary with entries and entity-module mapping
   - `ChangeClassification.php` -- Per-entity change classification with impact levels
@@ -65,7 +66,9 @@ The extension uses a commit-based approach instead of semver:
 - `src/Service/` -- Business logic
   - `GitService.php` -- Clone/fetch/pull via Shell::command()
   - `RepoInspector.php` -- Read bundle/module definitions from clone
-  - `VocabBuilder.php` -- Build vocab.json from module entity lists at install time
+  - `WikitextParser.php` -- Parse semantic annotations from .wikitext entity files
+  - `DependencyResolver.php` -- Resolve full entity graph from module categories at install time
+  - `VocabBuilder.php` -- Build vocab.json using DependencyResolver output
   - `StagingService.php` -- Build/clear staging dir with pre-merge support
   - `ImportService.php` -- Orchestrate install/update/remove lifecycle
   - `ChangeClassificationService.php` -- Classify entity changes with impact levels
