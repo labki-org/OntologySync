@@ -3,9 +3,9 @@
 namespace MediaWiki\Extension\OntologySync\Service;
 
 /**
- * Parses semantic annotations from .wikitext files in the labki-ontology repo.
+ * Parses template call syntax from .wikitext files in the labki-ontology repo.
  *
- * Extracts [[Property::Value]] annotations from between OntologySync markers,
+ * Extracts {{Template|param=value}} calls from between OntologySync markers,
  * and [[Category:X]] annotations from outside the markers.
  */
 class WikitextParser {
@@ -39,14 +39,14 @@ class WikitextParser {
 			return null;
 		}
 
-		$annotations = $this->extractAnnotations( $wikitext );
+		[ , $params ] = $this->extractTemplateParams( $wikitext );
 
 		$result = [
-			'parents' => $this->resolveRefs( $annotations, 'Has parent category', 'Category' ),
-			'required_properties' => $this->resolveRefs( $annotations, 'Has required property', 'Property' ),
-			'optional_properties' => $this->resolveRefs( $annotations, 'Has optional property', 'Property' ),
-			'required_subobjects' => $this->resolveRefs( $annotations, 'Has required subobject', 'Subobject' ),
-			'optional_subobjects' => $this->resolveRefs( $annotations, 'Has optional subobject', 'Subobject' ),
+			'parents' => $this->splitAndConvert( $params['has_parent_category'] ?? '' ),
+			'required_properties' => $this->splitAndConvert( $params['has_required_property'] ?? '' ),
+			'optional_properties' => $this->splitAndConvert( $params['has_optional_property'] ?? '' ),
+			'required_subobjects' => $this->splitAndConvert( $params['has_required_subobject'] ?? '' ),
+			'optional_subobjects' => $this->splitAndConvert( $params['has_optional_subobject'] ?? '' ),
 		];
 
 		$this->cache[$cacheKey] = $result;
@@ -70,11 +70,11 @@ class WikitextParser {
 			return null;
 		}
 
-		$annotations = $this->extractAnnotations( $wikitext );
+		[ , $params ] = $this->extractTemplateParams( $wikitext );
 
 		$result = [
-			'required_properties' => $this->resolveRefs( $annotations, 'Has required property', 'Property' ),
-			'optional_properties' => $this->resolveRefs( $annotations, 'Has optional property', 'Property' ),
+			'required_properties' => $this->splitAndConvert( $params['has_required_property'] ?? '' ),
+			'optional_properties' => $this->splitAndConvert( $params['has_optional_property'] ?? '' ),
 		];
 
 		$this->cache[$cacheKey] = $result;
@@ -98,11 +98,13 @@ class WikitextParser {
 			return null;
 		}
 
-		$annotations = $this->extractAnnotations( $wikitext );
-		$templateRefs = $this->resolveRefs( $annotations, 'Has template', 'Template' );
+		[ , $params ] = $this->extractTemplateParams( $wikitext );
 
+		$templateValue = $params['has_template'] ?? null;
 		$result = [
-			'has_display_template' => $templateRefs[0] ?? null,
+			'has_display_template' => $templateValue !== null
+				? $this->pageNameToEntityKey( $templateValue )
+				: null,
 		];
 
 		$this->cache[$cacheKey] = $result;
@@ -132,33 +134,57 @@ class WikitextParser {
 	}
 
 	/**
-	 * Extract [[Property::Value]] annotations from between OntologySync markers.
+	 * Extract template name and parameters from a template call within OntologySync markers.
 	 *
-	 * @return array<string, string[]> Property name => array of values
+	 * Parses content like:
+	 *   <!-- OntologySync Start -->
+	 *   {{Property
+	 *   |has_type=Text
+	 *   |has_description=A description
+	 *   }}
+	 *   <!-- OntologySync End -->
+	 *
+	 * @return array{0: string, 1: array<string, string>} [template_name, params]
 	 */
-	private function extractAnnotations( string $wikitext ): array {
+	private function extractTemplateParams( string $wikitext ): array {
 		$startPos = strpos( $wikitext, self::MARKER_START );
 		$endPos = strpos( $wikitext, self::MARKER_END );
 
 		if ( $startPos === false || $endPos === false || $endPos <= $startPos ) {
-			return [];
+			return [ '', [] ];
 		}
 
-		$block = substr(
+		$block = trim( substr(
 			$wikitext,
 			$startPos + strlen( self::MARKER_START ),
 			$endPos - $startPos - strlen( self::MARKER_START )
-		);
+		) );
 
-		$annotations = [];
-		foreach ( explode( "\n", $block ) as $line ) {
-			$line = trim( $line );
-			if ( preg_match( '/^\[\[([^:\[\]]+)::(.+)\]\]$/', $line, $matches ) ) {
-				$annotations[$matches[1]][] = $matches[2];
+		// Must be a template call
+		if ( !str_starts_with( $block, '{{' ) || !str_ends_with( $block, '}}' ) ) {
+			return [ '', [] ];
+		}
+
+		// Strip {{ and }}
+		$inner = substr( $block, 2, -2 );
+
+		// Split on | at start of line
+		$parts = preg_split( '/\n\|/', $inner );
+		$templateName = trim( $parts[0] );
+
+		$params = [];
+		for ( $i = 1; $i < count( $parts ); $i++ ) {
+			$eqPos = strpos( $parts[$i], '=' );
+			if ( $eqPos !== false ) {
+				$key = trim( substr( $parts[$i], 0, $eqPos ) );
+				$value = trim( substr( $parts[$i], $eqPos + 1 ) );
+				if ( $value !== '' ) {
+					$params[$key] = $value;
+				}
 			}
 		}
 
-		return $annotations;
+		return [ $templateName, $params ];
 	}
 
 	/**
@@ -186,38 +212,35 @@ class WikitextParser {
 	}
 
 	/**
-	 * Resolve annotation values to entity keys by stripping namespace prefixes.
+	 * Split a comma-separated value string and convert each page name to an entity key.
 	 *
-	 * @param array<string, string[]> $annotations
-	 * @param string $annotationName The annotation property name
-	 * @param string $namespace Namespace prefix to strip (e.g. "Property", "Category")
+	 * "Has name, Has email" -> ["Has_name", "Has_email"]
+	 *
 	 * @return string[] Entity keys
 	 */
-	private function resolveRefs( array $annotations, string $annotationName, string $namespace ): array {
-		$values = $annotations[$annotationName] ?? [];
-		$result = [];
-
-		foreach ( $values as $value ) {
-			$result[] = $this->stripNamespaceAndConvert( $value, $namespace );
+	private function splitAndConvert( string $value ): array {
+		if ( $value === '' ) {
+			return [];
 		}
 
+		$parts = explode( ',', $value );
+		$result = [];
+		foreach ( $parts as $part ) {
+			$trimmed = trim( $part );
+			if ( $trimmed !== '' ) {
+				$result[] = $this->pageNameToEntityKey( $trimmed );
+			}
+		}
 		return $result;
 	}
 
 	/**
-	 * Strip namespace prefix and convert page name to entity key.
+	 * Convert a wiki page name (spaces) to an entity key (underscores).
 	 *
-	 * "Property:Has name" -> "Has_name"
-	 * "Category:Agent" -> "Agent"
+	 * "Has name" -> "Has_name"
 	 */
-	private function stripNamespaceAndConvert( string $value, string $namespace ): string {
-		$prefix = $namespace . ':';
-		if ( str_starts_with( $value, $prefix ) ) {
-			$value = substr( $value, strlen( $prefix ) );
-		}
-
-		// Convert spaces to underscores (page name -> entity key)
-		return str_replace( ' ', '_', $value );
+	private function pageNameToEntityKey( string $pageName ): string {
+		return str_replace( ' ', '_', $pageName );
 	}
 
 	/**
