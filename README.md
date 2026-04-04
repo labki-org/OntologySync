@@ -19,8 +19,9 @@ MediaWiki extension that connects wikis to the [Labki ontology](https://github.c
 2. Add to `LocalSettings.php`:
    ```php
    wfLoadExtension( 'OntologySync' );
-   $wgOntologySyncRepoPath = '/var/lib/ontologysync/labki-ontology';
+   $wgOntologySyncRepoPath = "$IP/cache-ontologysync/labki-ontology";
    ```
+   The parent directory (`cache-ontologysync/`) must exist and be writable by the web server user. The extension will clone the ontology repo into this path.
 
 3. Run the MediaWiki update script to create the extension's database tables:
    ```bash
@@ -37,7 +38,7 @@ Add these to `LocalSettings.php` after `wfLoadExtension( 'OntologySync' );`:
 
 | Variable | Type | Default | Description |
 |---|---|---|---|
-| `$wgOntologySyncRepoPath` | `string` | `null` | **Required.** Local filesystem path where the labki-ontology repository will be cloned. The web server user must have write access to this path. |
+| `$wgOntologySyncRepoPath` | `string` | `null` | **Required.** Local filesystem path where the labki-ontology repository will be cloned. The parent directory must exist and be writable by the web server user. Recommended default: `"$IP/cache-ontologysync/labki-ontology"` (works out of the box in Docker). |
 | `$wgOntologySyncRepoUrl` | `string` | `https://github.com/labki-org/labki-ontology` | Git URL of the ontology repository to clone. Change this to use a fork or private mirror. |
 | `$wgOntologySyncStagingPath` | `string\|null` | `null` | Path where import artifacts (vocab.json + .wikitext files) are staged before import. When `null`, defaults to `$wgCacheDirectory/ontologysync-staging`. |
 | `$wgOntologySyncBundlePath` | `string\|null` | `null` | Absolute path to a bundle version directory for legacy/manual import (e.g., `bundles/Default/versions/1.0.0/`). The directory must contain a `*.vocab.json` manifest and `.wikitext` entity files. When set, it is registered with SMW's `$smwgImportFileDirs` so that `update.php` imports the bundle. |
@@ -47,16 +48,16 @@ Add these to `LocalSettings.php` after `wfLoadExtension( 'OntologySync' );`:
 
 ```php
 wfLoadExtension( 'OntologySync' );
-$wgOntologySyncRepoPath = '/var/lib/ontologysync/labki-ontology';
+$wgOntologySyncRepoPath = "$IP/cache-ontologysync/labki-ontology";
 ```
 
 ### Full example
 
 ```php
 wfLoadExtension( 'OntologySync' );
-$wgOntologySyncRepoPath = '/var/lib/ontologysync/labki-ontology';
+$wgOntologySyncRepoPath = "$IP/cache-ontologysync/labki-ontology";
 $wgOntologySyncRepoUrl = 'https://github.com/my-org/my-ontology-fork';
-$wgOntologySyncStagingPath = '/var/cache/ontologysync-staging';
+$wgOntologySyncStagingPath = "$IP/cache-ontologysync/staging";
 $wgOntologySyncAutoRegisterStaging = true;
 ```
 
