@@ -25,8 +25,7 @@ class WikitextParser {
 	/**
 	 * Parse a category wikitext file.
 	 *
-	 * @return ?array{parents: string[], required_properties: string[], optional_properties: string[],
-	 *                required_subobjects: string[], optional_subobjects: string[]}
+	 * @return ?array Parsed category with parents, required/optional properties and subobjects
 	 */
 	public function parseCategory( string $repoPath, string $entityKey ): ?array {
 		$cacheKey = "categories/$entityKey";
