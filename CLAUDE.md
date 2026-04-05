@@ -45,8 +45,27 @@ The extension uses a commit-based approach instead of semver:
 3. Admin browses available bundles/modules on Special:OntologySync
 4. Selecting a bundle triggers DependencyResolver to resolve the full entity graph from module categories, then VocabBuilder generates vocab.json
 5. StagingService copies wikitext files to staging dir with pre-merge of user content
-6. `php maintenance/run.php update` triggers SMW's content importer
-7. Extension records installed state in DB with content hashes
+6. Admin runs the single import command (see below), which:
+   a. Runs `update --quick` to trigger SMW's content importer
+   b. Records installed state in DB with content hashes
+   c. Rebuilds SMW semantic data for all imported pages
+
+### Import Command
+
+After staging a bundle from Special:OntologySync, run one command:
+
+```bash
+php maintenance/run.php "MediaWiki\Extension\OntologySync\Maintenance\RecordStagedImports"
+```
+
+Options:
+- `--skip-import` — Skip `update.php` (if already run manually)
+- `--skip-rebuild` — Skip SMW semantic data rebuild
+
+The SMW rebuild step is necessary because SMW's content importer creates wiki
+pages but does not trigger SMW's semantic data parsing. Without it, pages in
+custom namespaces (especially Subobject pages from SemanticSchemas) will exist
+but have no semantic data.
 
 ### Directory Layout
 
@@ -74,6 +93,8 @@ The extension uses a commit-based approach instead of semver:
   - `ChangeClassificationService.php` -- Classify entity changes with impact levels
   - `HashService.php` -- SHA256 of content between OntologySync markers
   - `PageResolver.php` -- Map namespace constants to integer IDs
+- `src/Maintenance/` -- Maintenance scripts
+  - `RecordStagedImports.php` -- Single-command import: update.php + record + SMW rebuild
 - `src/Special/` -- Special:OntologySync with tabbed UI
 - `sql/` -- Abstract schema (tables.json) + generated MySQL/SQLite DDL
 

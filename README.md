@@ -67,8 +67,31 @@ OntologySync registers the bundle directory with SMW's `$smwgImportFileDirs`.
 The bundle directory contains a `*.vocab.json` manifest (the format SMW's
 content importer understands) and `.wikitext` files for each entity page.
 
-When `update.php` runs, SMW's importer reads the vocab.json and creates/updates
-all listed wiki pages in their correct namespaces.
+### Installing a bundle
+
+1. Visit **Special:OntologySync**, browse available bundles, and click **Install**.
+2. Review the change preview and click **Confirm & Stage**.
+3. Run the import command on the server:
+   ```bash
+   php maintenance/run.php "MediaWiki\Extension\OntologySync\Maintenance\RecordStagedImports"
+   ```
+
+This single command performs three steps:
+- Runs `update.php --quick` to trigger SMW's content importer (creates wiki pages)
+- Records bundle metadata, page hashes, and module info in the database
+- Rebuilds SMW semantic data for all imported pages
+
+Options:
+- `--skip-import` — Skip running `update.php` (useful if you already ran it manually)
+- `--skip-rebuild` — Skip the SMW semantic data rebuild
+
+### Why the SMW rebuild is needed
+
+SMW's content importer creates wiki pages but does not trigger SMW's semantic
+data parsing hooks. Without the rebuild step, pages in custom namespaces
+(especially Subobject pages from SemanticSchemas) will exist in the wiki but
+have no semantic data — meaning SMW queries, forms, and browse interfaces
+won't see them. The import command handles this automatically.
 
 ## Custom namespaces
 
