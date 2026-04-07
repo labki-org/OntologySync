@@ -194,8 +194,11 @@ class RepoInspector {
 	/**
 	 * List all media files in the repo's media/ directory.
 	 *
+	 * For each media file, checks for a matching JSON sidecar file
+	 * (same base name with .json extension) containing metadata.
+	 *
 	 * @param string $repoPath Path to the labki-ontology clone
-	 * @return array<string, string> Map of filename => full filesystem path
+	 * @return array<string, array{path: string, metadata: array|null}> Map of filename => file info
 	 */
 	public function listMediaFiles( string $repoPath ): array {
 		$mediaDir = $repoPath . '/media';
@@ -209,7 +212,13 @@ class RepoInspector {
 			}
 			$ext = strtolower( pathinfo( $entry, PATHINFO_EXTENSION ) );
 			if ( in_array( $ext, self::MEDIA_EXTENSIONS, true ) ) {
-				$files[$entry] = $mediaDir . '/' . $entry;
+				$baseName = pathinfo( $entry, PATHINFO_FILENAME );
+				$jsonPath = $mediaDir . '/' . $baseName . '.json';
+				$metadata = $this->readJson( $jsonPath );
+				$files[$entry] = [
+					'path' => $mediaDir . '/' . $entry,
+					'metadata' => $metadata,
+				];
 			}
 		}
 		return $files;

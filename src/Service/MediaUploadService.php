@@ -27,7 +27,7 @@ class MediaUploadService {
 	/**
 	 * Upload media files to MediaWiki with OntologySync- prefix.
 	 *
-	 * @param array<string, string> $mediaFiles Map of filename => full path
+	 * @param array<string, array{path: string, metadata: array|null}> $mediaFiles Map of filename => file info
 	 * @param array<string, string> $existingHashes Map of filename => hash from previous upload
 	 * @return array{uploaded: string[], skipped: string[], errors: string[], hashes: array<string, string>}
 	 */
@@ -48,7 +48,9 @@ class MediaUploadService {
 			return $result;
 		}
 
-		foreach ( $mediaFiles as $filename => $filePath ) {
+		foreach ( $mediaFiles as $filename => $fileInfo ) {
+			$filePath = $fileInfo['path'];
+			$metadata = $fileInfo['metadata'];
 			$hash = 'sha256:' . hash_file( 'sha256', $filePath );
 			$result['hashes'][$filename] = $hash;
 
@@ -84,9 +86,11 @@ class MediaUploadService {
 				continue;
 			}
 
+			$pageText = $this->generateFilePageText( $metadata );
+
 			$status = $upload->performUpload(
 				'OntologySync media import',
-				'',
+				$pageText,
 				false,
 				$user
 			);
@@ -99,6 +103,52 @@ class MediaUploadService {
 		}
 
 		return $result;
+	}
+
+	/**
+	 * Generate the File: description page wikitext from metadata.
+	 *
+	 * @param array|null $metadata Decoded JSON metadata, or null if unavailable
+	 * @return string Wikitext for the File: description page
+	 */
+	private function generateFilePageText( ?array $metadata ): string {
+		if ( $metadata === null ) {
+			return "Uploaded by OntologySync from the labki-ontology repository.\n\n" .
+				'[[Category:OntologySync-managed-media]]';
+		}
+
+		$lines = [];
+
+		$description = $metadata['description'] ?? '';
+		$lines[] = '== Summary ==';
+		$lines[] = $description;
+		$lines[] = '';
+
+		$lines[] = '{| class="wikitable"';
+
+		if ( isset( $metadata['source'] ) ) {
+			$lines[] = '|-';
+			$lines[] = '! Source';
+			$lines[] = '| ' . $metadata['source'];
+		}
+
+		if ( isset( $metadata['author'] ) ) {
+			$lines[] = '|-';
+			$lines[] = '! Author';
+			$lines[] = '| ' . $metadata['author'];
+		}
+
+		if ( isset( $metadata['license'] ) ) {
+			$lines[] = '|-';
+			$lines[] = '! License';
+			$lines[] = '| ' . $metadata['license'];
+		}
+
+		$lines[] = '|}';
+		$lines[] = '';
+		$lines[] = '[[Category:OntologySync-managed-media]]';
+
+		return implode( "\n", $lines );
 	}
 
 	/**

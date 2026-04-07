@@ -63,14 +63,75 @@ class RepoInspectorMediaTest extends TestCase {
 		$this->assertArrayHasKey( 'shot.jpg', $result );
 	}
 
-	public function testReturnsCorrectFilePaths(): void {
+	public function testReturnsCorrectFileInfoStructure(): void {
 		$mediaDir = $this->tmpDir . '/media';
 		mkdir( $mediaDir, 0777, true );
 		file_put_contents( $mediaDir . '/logo.webp', 'WEBP' );
 
 		$result = $this->inspector->listMediaFiles( $this->tmpDir );
 
-		$this->assertSame( $mediaDir . '/logo.webp', $result['logo.webp'] );
+		$this->assertArrayHasKey( 'path', $result['logo.webp'] );
+		$this->assertArrayHasKey( 'metadata', $result['logo.webp'] );
+		$this->assertSame( $mediaDir . '/logo.webp', $result['logo.webp']['path'] );
+		$this->assertNull( $result['logo.webp']['metadata'] );
+	}
+
+	public function testLoadsJsonSidecarMetadata(): void {
+		$mediaDir = $this->tmpDir . '/media';
+		mkdir( $mediaDir, 0777, true );
+		file_put_contents( $mediaDir . '/photo.png', 'PNG' );
+		file_put_contents( $mediaDir . '/photo.json', json_encode( [
+			'description' => 'Photo of the equipment',
+			'source' => 'Aharoni Lab, UCLA',
+			'license' => 'CC-BY-4.0',
+			'author' => 'Daniel Aharoni',
+		] ) );
+
+		$result = $this->inspector->listMediaFiles( $this->tmpDir );
+
+		$this->assertNotNull( $result['photo.png']['metadata'] );
+		$this->assertSame( 'Aharoni Lab, UCLA', $result['photo.png']['metadata']['source'] );
+		$this->assertSame( 'CC-BY-4.0', $result['photo.png']['metadata']['license'] );
+		$this->assertSame( 'Daniel Aharoni', $result['photo.png']['metadata']['author'] );
+		$this->assertSame( 'Photo of the equipment', $result['photo.png']['metadata']['description'] );
+	}
+
+	public function testMetadataNullWhenJsonMissing(): void {
+		$mediaDir = $this->tmpDir . '/media';
+		mkdir( $mediaDir, 0777, true );
+		file_put_contents( $mediaDir . '/photo.png', 'PNG' );
+
+		$result = $this->inspector->listMediaFiles( $this->tmpDir );
+
+		$this->assertNull( $result['photo.png']['metadata'] );
+	}
+
+	public function testMetadataNullWhenJsonInvalid(): void {
+		$mediaDir = $this->tmpDir . '/media';
+		mkdir( $mediaDir, 0777, true );
+		file_put_contents( $mediaDir . '/photo.png', 'PNG' );
+		file_put_contents( $mediaDir . '/photo.json', 'not valid json' );
+
+		$result = $this->inspector->listMediaFiles( $this->tmpDir );
+
+		$this->assertNull( $result['photo.png']['metadata'] );
+	}
+
+	public function testMixedFilesWithAndWithoutMetadata(): void {
+		$mediaDir = $this->tmpDir . '/media';
+		mkdir( $mediaDir, 0777, true );
+		file_put_contents( $mediaDir . '/with_meta.png', 'PNG' );
+		file_put_contents( $mediaDir . '/with_meta.json', json_encode( [
+			'source' => 'Test Lab',
+			'license' => 'MIT',
+		] ) );
+		file_put_contents( $mediaDir . '/no_meta.jpg', 'JPG' );
+
+		$result = $this->inspector->listMediaFiles( $this->tmpDir );
+
+		$this->assertNotNull( $result['with_meta.png']['metadata'] );
+		$this->assertSame( 'Test Lab', $result['with_meta.png']['metadata']['source'] );
+		$this->assertNull( $result['no_meta.jpg']['metadata'] );
 	}
 
 	public function testFiltersOutUnsupportedExtensions(): void {
