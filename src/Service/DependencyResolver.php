@@ -23,6 +23,9 @@ class DependencyResolver {
 		$this->repoInspector = $repoInspector;
 	}
 
+	/** @var string Dashboard category auto-added when dashboards are present */
+	private const DASHBOARD_CATEGORY = 'Dashboard';
+
 	/**
 	 * Resolve all entities needed for a set of manually-picked categories.
 	 *
@@ -36,6 +39,11 @@ class DependencyResolver {
 		array $manualCategories,
 		array $dashboards
 	): ResolvedEntities {
+		// Auto-include Dashboard category when any dashboards are present
+		if ( $dashboards !== [] && !in_array( self::DASHBOARD_CATEGORY, $manualCategories, true ) ) {
+			$manualCategories[] = self::DASHBOARD_CATEGORY;
+		}
+
 		// Phase 1: Transitively resolve parent categories
 		$allCategories = $this->resolveParentCategories( $repoPath, $manualCategories );
 

@@ -36,16 +36,21 @@ class VocabBuilder {
 	}
 
 	/**
-	 * Build vocabulary from a set of modules.
+	 * Build vocabulary from a set of modules and optional bundle-level dashboards.
 	 *
 	 * @param string $repoPath Path to the labki-ontology clone
 	 * @param string[] $moduleIds Module IDs to include
+	 * @param string[] $bundleDashboards Dashboard keys declared at the bundle level
 	 * @return VocabResult
 	 */
-	public function buildVocab( string $repoPath, array $moduleIds ): VocabResult {
+	public function buildVocab(
+		string $repoPath,
+		array $moduleIds,
+		array $bundleDashboards = []
+	): VocabResult {
 		// Collect all categories and dashboards from modules
 		$allCategories = [];
-		$allDashboards = [];
+		$allDashboards = $bundleDashboards;
 		$categoryModuleMap = []; // category => first module that declared it
 
 		foreach ( $moduleIds as $moduleId ) {
