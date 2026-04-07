@@ -23,10 +23,10 @@ class ChangeClassificationService {
 	private PageResolver $pageResolver;
 
 	/** @var string[] Entity types where content is fully managed (no markers) */
-	private const FULLY_MANAGED_TYPES = [ 'templates', 'dashboards' ];
+	private const FULLY_MANAGED_TYPES = [ 'templates' ];
 
 	/** @var string[] Entity types where marker blocks are always updated */
-	private const MARKER_MANAGED_TYPES = [ 'categories', 'properties', 'subobjects' ];
+	private const MARKER_MANAGED_TYPES = [ 'categories', 'properties', 'subobjects', 'dashboards' ];
 
 	public function __construct(
 		PageStore $pageStore,

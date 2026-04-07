@@ -66,7 +66,9 @@ class ImportService {
 			return $this->emptyPreview( [ 'Bundle not found' ] );
 		}
 
-		$vocabResult = $this->vocabBuilder->buildVocab( $repoPath, $bundle->getModules() );
+		$vocabResult = $this->vocabBuilder->buildVocab(
+			$repoPath, $bundle->getModules(), $bundle->getDashboards()
+		);
 		if ( $vocabResult->getEntries() === [] ) {
 			return $this->emptyPreview( [ 'No entities found in bundle modules' ] );
 		}
@@ -147,7 +149,9 @@ class ImportService {
 			return false;
 		}
 
-		$vocabResult = $this->vocabBuilder->buildVocab( $repoPath, $bundle->getModules() );
+		$vocabResult = $this->vocabBuilder->buildVocab(
+			$repoPath, $bundle->getModules(), $bundle->getDashboards()
+		);
 
 		// Gather existing page content for pre-merge
 		$existingPageContent = $this->gatherExistingPageContent( $vocabResult );

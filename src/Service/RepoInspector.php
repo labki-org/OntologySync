@@ -153,6 +153,42 @@ class RepoInspector {
 	}
 
 	/**
+	 * Expand dashboard IDs to include subpages.
+	 *
+	 * For each dashboard ID, checks if a subdirectory exists containing
+	 * subpage .wikitext files and adds them to the list.
+	 *
+	 * @param string $repoPath Path to the labki-ontology clone
+	 * @param string[] $dashboardIds Root dashboard entity keys
+	 * @return string[] All dashboard entity keys including subpages
+	 */
+	public function expandDashboardSubpages( string $repoPath, array $dashboardIds ): array {
+		$expanded = [];
+		$dashboardsDir = $repoPath . '/dashboards';
+
+		foreach ( $dashboardIds as $dashId ) {
+			$expanded[] = $dashId;
+
+			$subDir = $dashboardsDir . '/' . $dashId;
+			if ( !is_dir( $subDir ) ) {
+				continue;
+			}
+
+			foreach ( scandir( $subDir ) as $entry ) {
+				if ( $entry === '.' || $entry === '..' ) {
+					continue;
+				}
+				if ( str_ends_with( $entry, '.wikitext' ) ) {
+					$subpageName = substr( $entry, 0, -strlen( '.wikitext' ) );
+					$expanded[] = $dashId . '/' . $subpageName;
+				}
+			}
+		}
+
+		return $expanded;
+	}
+
+	/**
 	 * Read and parse a JSON file.
 	 */
 	private function readJson( string $path ): ?array {
