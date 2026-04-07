@@ -115,7 +115,11 @@ class DependencyResolver {
 		$templateList = array_keys( $templates );
 		sort( $templateList );
 
-		$dashboardList = array_unique( $dashboards );
+		// Expand dashboard IDs to include subpages
+		$expandedDashboards = $this->repoInspector->expandDashboardSubpages(
+			$repoPath, $dashboards
+		);
+		$dashboardList = array_unique( $expandedDashboards );
 		sort( $dashboardList );
 
 		return new ResolvedEntities(
