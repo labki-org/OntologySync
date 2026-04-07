@@ -11,6 +11,9 @@ use MediaWiki\Extension\OntologySync\Model\ModuleInfo;
  */
 class RepoInspector {
 
+	/** @var string[] Allowed media file extensions */
+	private const MEDIA_EXTENSIONS = [ 'png', 'jpg', 'jpeg', 'gif', 'svg', 'webp' ];
+
 	/** @var array<string,string> Entity type => directory name in repo */
 	private const ENTITY_TYPE_DIRS = [
 		'categories' => 'categories',
@@ -186,6 +189,30 @@ class RepoInspector {
 		}
 
 		return $expanded;
+	}
+
+	/**
+	 * List all media files in the repo's media/ directory.
+	 *
+	 * @param string $repoPath Path to the labki-ontology clone
+	 * @return array<string, string> Map of filename => full filesystem path
+	 */
+	public function listMediaFiles( string $repoPath ): array {
+		$mediaDir = $repoPath . '/media';
+		if ( !is_dir( $mediaDir ) ) {
+			return [];
+		}
+		$files = [];
+		foreach ( scandir( $mediaDir ) as $entry ) {
+			if ( $entry === '.' || $entry === '..' ) {
+				continue;
+			}
+			$ext = strtolower( pathinfo( $entry, PATHINFO_EXTENSION ) );
+			if ( in_array( $ext, self::MEDIA_EXTENSIONS, true ) ) {
+				$files[$entry] = $mediaDir . '/' . $entry;
+			}
+		}
+		return $files;
 	}
 
 	/**

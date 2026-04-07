@@ -3,6 +3,8 @@
 namespace MediaWiki\Extension\OntologySync\Maintenance;
 
 use MediaWiki\Extension\OntologySync\Service\ImportService;
+use MediaWiki\Extension\OntologySync\Service\MediaUploadService;
+use MediaWiki\Extension\OntologySync\Service\RepoInspector;
 use MediaWiki\Extension\OntologySync\Service\StagingService;
 use MediaWiki\Extension\OntologySync\Store\BundleStore;
 use MediaWiki\Extension\OntologySync\Store\PageStore;
@@ -56,11 +58,6 @@ class RecordStagedImports extends Maintenance {
 			return;
 		}
 
-		// Step 1: Run update --quick to trigger SMW content import
-		if ( !$this->hasOption( 'skip-import' ) ) {
-			$this->runSmwImport();
-		}
-
 		$repoPath = $config->get( 'OntologySyncRepoPath' );
 		if ( $repoPath === null ) {
 			$this->fatalError( 'OntologySync: $wgOntologySyncRepoPath not configured.' );
@@ -70,6 +67,34 @@ class RecordStagedImports extends Maintenance {
 			$config->get( 'OntologySyncStagingPath' ),
 			$config->get( 'CacheDirectory' )
 		);
+
+		// Step 0: Upload media files from repo
+		/** @var RepoInspector $repoInspector */
+		$repoInspector = $services->get( 'OntologySync.RepoInspector' );
+		/** @var MediaUploadService $mediaUploader */
+		$mediaUploader = $services->get( 'OntologySync.MediaUploadService' );
+
+		$mediaFiles = $repoInspector->listMediaFiles( $repoPath );
+		if ( $mediaFiles !== [] ) {
+			$hashFilePath = $stagingRoot . '/media-hashes.json';
+			$existingHashes = $mediaUploader->loadHashes( $hashFilePath );
+
+			$this->output( "Uploading " . count( $mediaFiles ) . " media file(s)...\n" );
+			$uploadResult = $mediaUploader->uploadMediaFiles( $mediaFiles, $existingHashes );
+			$this->output( "  Uploaded: " . count( $uploadResult['uploaded'] ) . "\n" );
+			$this->output( "  Skipped (unchanged): " . count( $uploadResult['skipped'] ) . "\n" );
+			foreach ( $uploadResult['errors'] as $err ) {
+				$this->error( "  Media upload error: $err\n" );
+			}
+
+			// Save updated hashes
+			$mediaUploader->saveHashes( $hashFilePath, $uploadResult['hashes'] );
+		}
+
+		// Step 1: Run update --quick to trigger SMW content import
+		if ( !$this->hasOption( 'skip-import' ) ) {
+			$this->runSmwImport();
+		}
 
 		// Step 2: Record metadata for each staged bundle
 		$allPageTitles = [];

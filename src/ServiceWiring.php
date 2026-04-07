@@ -5,6 +5,7 @@ use MediaWiki\Extension\OntologySync\Service\DependencyResolver;
 use MediaWiki\Extension\OntologySync\Service\GitService;
 use MediaWiki\Extension\OntologySync\Service\HashService;
 use MediaWiki\Extension\OntologySync\Service\ImportService;
+use MediaWiki\Extension\OntologySync\Service\MediaUploadService;
 use MediaWiki\Extension\OntologySync\Service\PageResolver;
 use MediaWiki\Extension\OntologySync\Service\RepoInspector;
 use MediaWiki\Extension\OntologySync\Service\StagingService;
@@ -71,6 +72,14 @@ return [
 			$services->get( 'OntologySync.PageResolver' ),
 			$services->get( 'OntologySync.VocabBuilder' ),
 			$services->get( 'OntologySync.ChangeClassificationService' )
+		);
+	},
+
+	'OntologySync.MediaUploadService' => static function (
+		MediaWikiServices $services
+	): MediaUploadService {
+		return new MediaUploadService(
+			$services->get( 'OntologySync.HashService' )
 		);
 	},
 

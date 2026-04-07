@@ -21,6 +21,7 @@ class StagingService {
 
 	private const MARKER_START = '<!-- OntologySync Start -->';
 	private const MARKER_END = '<!-- OntologySync End -->';
+	private const MEDIA_PREFIX = 'OntologySync-';
 
 	private RepoInspector $repoInspector;
 	private HashService $hashService;
@@ -120,6 +121,9 @@ class StagingService {
 				continue;
 			}
 
+			// Rewrite [[File:X]] references to [[File:OntologySync-X]]
+			$repoContent = $this->rewriteMediaReferences( $repoContent );
+
 			// Pre-merge: if existing wiki page content is available and has markers,
 			// replace the marker block in the existing content with the new repo content
 			$existingContent = $existingPageContent[$entryKey] ?? null;
@@ -178,6 +182,22 @@ class StagingService {
 		$after = substr( $existingContent, $existEnd + strlen( self::MARKER_END ) );
 
 		return $before . $newBlock . $after;
+	}
+
+	/**
+	 * Rewrite [[File:X]] references to [[File:OntologySync-X]] in wikitext content.
+	 *
+	 * Uses a negative lookahead to prevent double-prefixing on re-imports.
+	 *
+	 * @param string $content Wikitext content
+	 * @return string Content with rewritten file references
+	 */
+	private function rewriteMediaReferences( string $content ): string {
+		return preg_replace(
+			'/\[\[File:(?!OntologySync-)([^\]|]+)/u',
+			'[[File:' . self::MEDIA_PREFIX . '$1',
+			$content
+		);
 	}
 
 	/**
